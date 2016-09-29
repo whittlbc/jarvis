@@ -13,8 +13,10 @@ def index():
 
 @app.route('/formula', methods = ['POST'])
 def new_formula():
-	formula = request.args.formula or {}
-	helpers.register_formula(formula)
+	formula_filename = request.args['formula_filename']
+	formula_contents = request.args['formula_contents']
+	
+	helpers.register_formula(formula_filename, formula_contents)
 
 	return jsonify({})
 
