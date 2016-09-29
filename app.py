@@ -1,95 +1,29 @@
-import os
-from flask import Flask
-from flask import jsonify
-from flask import request
-from functools import wraps
-from utils import logger
+from flask import Flask, render_template
+from flask.ext.socketio import SocketIO, emit
 
-# Create Flask app
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
 
-# import config vars
-app.config.from_object(os.environ['APP_SETTINGS'])
-
-# Create logger: (Ex: logger.info, logger.warning, logger.error)
-logger = logger.get_logger(app)
-
-
-# Home page route
 @app.route('/')
 def index():
-	return "Home"
+    return render_template('index.html')
 
+@socketio.on('my event', namespace='/test')
+def test_message(message):
+    emit('my response', {'data': message['data']})
 
-# Another route
-@app.route('/<name>')
-def my_name(name):
-	return "Hey there {}!".format(name)
+@socketio.on('my broadcast event', namespace='/test')
+def test_message(message):
+    emit('my response', {'data': message['data']}, broadcast=True)
 
+@socketio.on('connect', namespace='/test')
+def test_connect():
+    emit('my response', {'data': 'Connected'})
 
-# JSON route
-@app.route('/new')
-def new_route():
-	response = jsonify({ 'key': 'val' })
-	return response
-
-
-# Route with multiple methods:
-@app.route('/multi_method', methods = ['GET', 'POST'])
-def multi_method():
-	if request.method == 'GET':
-		return get_resp()
-		
-	elif request.method == 'POST':
-		return "Heard Post"
-
-
-def get_resp():
-	return "Heard Get"
-
-
-def before_filter(f):
-	return f
-	
-	
-def check_auth(username, password):
-	return username == 'admin' and password == 'secret'
-
-
-def authenticate():
-	message = { 'message': "Authenticate." }
-	resp = jsonify(message)
-
-	resp.status_code = 401
-	resp.headers['WWW-Authenticate'] = 'Basic realm="Example"'
-
-	return resp
-
-
-def auth_before_filter(f):
-	# Wrap the original function with this "decorated" one.
-	@wraps(f)
-	def decorated(*args, **kwargs):
-		auth = request.authorization
-		
-		if not auth:
-			return authenticate()
-		
-		elif not check_auth(auth.username, auth.password):
-			return authenticate()
-		
-		return f(*args, **kwargs)
-	
-	return decorated
-
-
-# Route with before filters
-@app.route('/with_before_filter')
-@before_filter
-@auth_before_filter
-def with_before_filter():
-	return "All good."
-
+@socketio.on('disconnect', namespace='/test')
+def test_disconnect():
+    print('Client disconnected')
 
 if __name__ == '__main__':
-	app.run(port = 3000, debug = app.config['DEBUG'])
+    socketio.run(app)
