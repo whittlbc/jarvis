@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template
-from flask.ext.socketio import SocketIO, emit
+from flask.ext.socketio import SocketIO
+from jarvis.event_handler import EventHandler
 
 app = Flask(__name__)
 app.config.from_object(os.environ.get('APP_SETTINGS'))
@@ -14,15 +15,7 @@ def index():
 
 @socket.on('event', namespace = '/master')
 def new_event(event):
-	if event['type'] == 'message:new':
-		respond('What up homie?')
-		
-	elif event['type'] == 'user:connect':
-		respond('User connected')
-
-
-def respond(text):
-	emit('response', { 'text': text })
+	EventHandler(event).handle_event()
 	
 
 if __name__ == '__main__':
