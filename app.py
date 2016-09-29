@@ -1,8 +1,10 @@
 from jarvis import app, helpers
 from flask import jsonify, request
 from flask.ext.socketio import SocketIO
+from flask.ext.sqlalchemy import SQLAlchemy
 from jarvis.event_handler import EventHandler
 
+db = SQLAlchemy(app)
 socket = SocketIO(app)
 
 @app.route('/')

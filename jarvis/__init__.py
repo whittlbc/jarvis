@@ -3,11 +3,13 @@ import logging
 import redis
 from flask import Flask
 
+
 # Init app
 app = Flask(__name__)
 
 # Set up app configs
 app.config.from_object(os.environ.get('APP_SETTINGS'))
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Add app logger
 app.logger.addHandler(logging.FileHandler('main.log'))
