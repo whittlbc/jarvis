@@ -1,29 +1,29 @@
+import os
 from flask import Flask, render_template
 from flask.ext.socketio import SocketIO, emit
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+app.config.from_object(os.environ.get('APP_SETTINGS'))
+socket = SocketIO(app)
+
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+	return render_template('index.html')
 
-@socketio.on('my event', namespace='/test')
-def test_message(message):
-    emit('my response', {'data': message['data']})
 
-@socketio.on('my broadcast event', namespace='/test')
-def test_message(message):
-    emit('my response', {'data': message['data']}, broadcast=True)
+@socket.on('event', namespace = '/master')
+def new_event(event):
+	if event['type'] == 'message:new':
+		respond('What up homie?')
+		
+	elif event['type'] == 'user:connect':
+		respond('User connected')
 
-@socketio.on('connect', namespace='/test')
-def test_connect():
-    emit('my response', {'data': 'Connected'})
 
-@socketio.on('disconnect', namespace='/test')
-def test_disconnect():
-    print('Client disconnected')
+def respond(text):
+	emit('response', { 'text': text })
+	
 
 if __name__ == '__main__':
-    socketio.run(app)
+	socket.run(app, port = 3000, debug = app.config.get('DEBUG'))
