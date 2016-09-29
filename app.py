@@ -2,6 +2,7 @@ from jarvis import app, helpers
 from flask import jsonify, request
 from flask.ext.socketio import SocketIO
 from jarvis.event_handler import EventHandler
+from jarvis import formulas
 
 socket = SocketIO(app)
 

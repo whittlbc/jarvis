@@ -1,12 +1,19 @@
-from flask.ext.socketio import emit
-from jarvis import helpers
-
+from jarvis.core import CoreEvent
+from jarvis import jarvis
 
 def perform(event):
 	text = event['text']
-	formulas = helpers.registered_formulas()
-	text_response('response')
+	matching_pattern = None
+	match = None
+	f = None
+	
+	print jarvis.formulas
+	
+	for pattern in jarvis.formulas.keys():
+		# if match between pattern and text, set matching_pattern and match
+		matching_pattern = '/time/'
+		match = 'My Match'
+		f = jarvis.formulas[pattern]
 
-
-def text_response(text):
-	emit('response', { 'text': text })
+	core_event = CoreEvent(event['type'], text, matching_pattern, match)
+	f(core_event)
