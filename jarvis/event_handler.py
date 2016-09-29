@@ -1,7 +1,8 @@
-import new_message
-import user_connect
+from jarvis.handlers import new_message, user_connect
+
 
 class EventHandler(object):
+	
 	RESPONSE_MAP = {
 		'message:new': new_message,
 		'user:connect': user_connect

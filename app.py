@@ -1,16 +1,21 @@
-import os
-from flask import Flask, render_template
+from jarvis import app, helpers
+from flask import jsonify, request
 from flask.ext.socketio import SocketIO
 from jarvis.event_handler import EventHandler
 
-app = Flask(__name__)
-app.config.from_object(os.environ.get('APP_SETTINGS'))
 socket = SocketIO(app)
-
 
 @app.route('/')
 def index():
-	return render_template('index.html')
+	return helpers.render_temp('index.html')
+
+
+@app.route('/formula', methods = ['POST'])
+def new_formula():
+	formula = request.args.formula or {}
+	helpers.register_formula(formula)
+
+	return jsonify({})
 
 
 @socket.on('event', namespace = '/master')
