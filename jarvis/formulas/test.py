@@ -1,7 +1,6 @@
 from jarvis import jarvis
 
 
-@jarvis.listen('/time/')
+@jarvis.listen('test')
 def time(event):
-	# event is CoreEvent instance
-	jarvis.respond('Time is 1:43: {}'.format(event.match))
+	jarvis.respond('Test Heard. Here are your matches: {}'.format(event.matches))
