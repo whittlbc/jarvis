@@ -58,3 +58,4 @@ docs/_build/
 .idea/
 .env
 config.py
+jarvis/formulas/
