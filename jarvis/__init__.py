@@ -14,7 +14,5 @@ app.config.from_object(os.environ.get('APP_SETTINGS'))
 app.logger.addHandler(logging.FileHandler('main.log'))
 app.logger.setLevel(logging.INFO)
 
-# Store redis singleton instance on app
-# app.redis = redis.StrictRedis.from_url(app.config.get('REDIS_URL'))
-
+# Declare new jarvis instance to be imported elsewhere
 jarvis = Jarvis()
