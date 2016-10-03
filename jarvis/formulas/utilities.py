@@ -17,3 +17,8 @@ def whats_up(event):
 def user_name(event):
 	# name = db.get('user', 'name')
 	jarvis.respond('You\'re Ben.')
+	
+
+@jarvis.listen(['weather'])
+def weather(event):
+	jarvis.respond('Weather info')

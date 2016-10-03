@@ -17,10 +17,22 @@ class Jarvis(object):
 			return f
 		
 		return decorator
+	
 
-
-	def respond(self, text):
-		emit('response', { 'text': text })
+	def respond(self, data):
+		payload = {}
+		
+		if isinstance(data, basestring):
+			payload['type'] = 'text',
+			payload['data'] = data
+		elif isinstance(data, dict):
+			payload['type'] = 'json',
+			payload['data'] = data
+		else:
+			payload['type'] = 'text'
+			payload['data'] = str(data)
+		
+		emit('response', payload)
 		
 		
 class CoreEvent(object):
