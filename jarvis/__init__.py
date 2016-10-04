@@ -1,6 +1,5 @@
 import os
 import logging
-import redis
 from flask import Flask
 from jarvis.core import Jarvis
 

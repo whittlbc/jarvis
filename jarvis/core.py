@@ -20,17 +20,14 @@ class Jarvis(object):
 	
 
 	def respond(self, data):
-		payload = {}
+		payload = {
+			'type': 'text',
+			'data': str(data)
+		}
 		
-		if isinstance(data, basestring):
-			payload['type'] = 'text',
-			payload['data'] = data
-		elif isinstance(data, dict):
+		if isinstance(data, dict):
 			payload['type'] = 'json',
 			payload['data'] = data
-		else:
-			payload['type'] = 'text'
-			payload['data'] = str(data)
 		
 		emit('response', payload)
 		
