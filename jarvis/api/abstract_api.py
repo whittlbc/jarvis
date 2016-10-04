@@ -5,7 +5,7 @@ from jarvis.helpers import db
 class AbstractApi(object):
 	
 	
-	def post_init(self, service_slug):
+	def __init__(self, service_slug):
 		self.service = db.service(service_slug)
 		self.configs = self.service['configs']
 		self.api_url = self.service['apiUrl']
