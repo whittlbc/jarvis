@@ -11,3 +11,7 @@ def find_one(collection, query):
 
 def current_user():
 	return find_one('users', { 'email': app.config.get('USER_EMAIL') })
+
+
+def service(slug):
+	return find_one('services', { 'slug': slug })
