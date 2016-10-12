@@ -3,7 +3,7 @@ from jarvis.handlers import new_message, user_connect
 
 class EventHandler(object):
 	
-	RESPONSE_MAP = {
+	HANDLER_MAP = {
 		'message:new': new_message,
 		'user:connect': user_connect
 	}
@@ -13,5 +13,5 @@ class EventHandler(object):
 		self.type = event['type']
 		
 	def handle_event(self):
-		handler = self.RESPONSE_MAP[self.type]
+		handler = self.HANDLER_MAP[self.type]
 		handler.perform(self.event)

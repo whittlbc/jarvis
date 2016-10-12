@@ -1,4 +1,5 @@
+from jarvis import logger
 
-def perform(event):
-	# Log that a new connection was established
-	print 'NEW USER CONNECTION'
+
+def perform(e):
+	logger.info('New User Connection')

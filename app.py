@@ -1,31 +1,32 @@
+import os
+from definitions import model_path
 from jarvis import app
 from jarvis.helpers import helpers
-from flask import jsonify, request
 from flask.ext.socketio import SocketIO
-from jarvis.event_handler import EventHandler
-from jarvis import formulas
+from jarvis.handlers.event_handler import EventHandler
+import jarvis.learn.teach as teacher
+
 
 socket = SocketIO(app)
 
+
+# Set up HTTP routes
 @app.route('/')
 def index():
 	return helpers.render_temp('index.html')
 
 
-@app.route('/formula', methods = ['POST'])
-def new_formula():
-	formula_filename = request.args['formula_filename']
-	formula_contents = request.args['formula_contents']
-	
-	helpers.register_formula(formula_filename, formula_contents)
-
-	return jsonify({})
-
-
-@socket.on('event', namespace = '/master')
+# Set up socket listeners
+@socket.on('event', namespace='/master')
 def new_event(event):
 	EventHandler(event).handle_event()
 	
 
+# Train and save our NN if it doesn't exist yet
+if not os.path.isfile(model_path):
+	teacher.teach()
+
+
+# Start our app
 if __name__ == '__main__':
-	socket.run(app, port = 3000, debug = app.config.get('DEBUG'))
+	socket.run(app, port=3000, debug=app.config.get('DEBUG'))
