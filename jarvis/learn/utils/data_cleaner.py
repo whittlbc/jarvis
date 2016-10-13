@@ -6,7 +6,7 @@ from nltk.stem.snowball import SnowballStemmer
 class DataCleaner:
 	stemmer = SnowballStemmer('english')
 
-	# inputs is an array or list
+	# inputs is an array of arrays
 	def clean(self, inputs):
 		return map(self.clean_input, inputs)
 	

@@ -9,7 +9,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.externals import joblib
 
 
-def teach(test=True):
+def perform(test=True):
 	# Create a new grid search classifier from a sci-kit pipeline
 	gs_clf = GridSearchCV(pipeline(), gs_clf_params(), n_jobs=-1)
 	

@@ -10,10 +10,10 @@ What temperature is it right now?|weather
 How many degrees is it right now?|weather
 What's the weather look like right now?|weather
 What's the weather forecast looking like?|weather
-What's my name?|user-info
-Who am I?|user-info
-Who are you speaking with?|user-info
-Say my name|user-info
-What is my name?|user-info
-Who's the boss?|user-info
-Who is the boss?|user-info
+What's my name?|user_info
+Who am I?|user_info
+Who are you speaking with?|user_info
+Say my name|user_info
+What is my name?|user_info
+Who's the boss?|user_info
+Who is the boss?|user_info

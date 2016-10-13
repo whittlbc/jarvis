@@ -1,17 +1,9 @@
 from jarvis.handlers import new_message, user_connect
 
-
-class EventHandler(object):
-	
-	HANDLER_MAP = {
+def handle_event(event):
+	handler = {
 		'message:new': new_message,
 		'user:connect': user_connect
-	}
+	}[event['type']]
 	
-	def __init__(self, event):
-		self.event = event
-		self.type = event['type']
-		
-	def handle_event(self):
-		handler = self.HANDLER_MAP[self.type]
-		handler.perform(self.event)
+	handler.perform(event)

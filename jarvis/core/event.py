@@ -1,7 +1,5 @@
 class Event:
 	
-	def __init__(self, type, text, pattern, matches):
+	def __init__(self, type, text):
 		self.type = type
 		self.text = text
-		self.pattern = pattern
-		self.matches = matches

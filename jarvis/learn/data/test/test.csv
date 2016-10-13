@@ -3,8 +3,8 @@ Hey jarvis, what's the weather|weather
 What's the weather right now?|weather
 Weather me|weather
 Is is supposed to rain today?|weather
-Who am I again?|user-info
-What's my name dude?|user-info
-Hey homie, tell me who I am.|user-info
-What is my full name?|user-info
-Hey jarvis, who's the man?|user-info
+Who am I again?|user_info
+What's my name dude?|user_info
+Hey homie, tell me who I am.|user_info
+What is my full name?|user_info
+Hey jarvis, who's the man?|user_info
