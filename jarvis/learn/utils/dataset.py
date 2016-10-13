@@ -1,6 +1,6 @@
 import pandas
+import jarvis.helpers.helpers as helpers
 from data_cleaner import DataCleaner
-from jarvis.learn.utils.actions import actions
 
 
 class Dataset:
@@ -33,7 +33,8 @@ class Dataset:
 	def format_targets(self, target_list):
 		target_map = {}
 		index = 0
-		
+		actions = helpers.get_actions()
+
 		# Map targets to their index inside of actions array
 		for action in actions:
 			target_map[action] = index

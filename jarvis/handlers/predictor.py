@@ -1,11 +1,14 @@
 from sklearn.externals import joblib
 from definitions import model_path
 from jarvis.learn.utils.data_cleaner import DataCleaner
-from jarvis.learn.utils.actions import actions
+import jarvis.helpers.helpers as helpers
 
 
 class Predictor:
 	predictor = None
+	
+	def __init__(self):
+		self.actions = helpers.get_actions()
 		
 	def load_model(self):
 		self.predictor = self.predictor or joblib.load(model_path, 'r')
@@ -18,4 +21,4 @@ class Predictor:
 		target_index = self.predictor.predict(cleaned_input)[0]
 		
 		# Return the predicted action
-		return actions[target_index]
+		return self.actions[target_index]
