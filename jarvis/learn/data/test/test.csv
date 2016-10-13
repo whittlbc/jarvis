@@ -1,10 +1,10 @@
-Hey homie, what be the weather?|weather
-Hey jarvis, what's the weather|weather
-What's the weather right now?|weather
-Weather me|weather
-Is is supposed to rain today?|weather
-Who am I again?|user_info
-What's my name dude?|user_info
-Hey homie, tell me who I am.|user_info
-What is my full name?|user_info
-Hey jarvis, who's the man?|user_info
+Hey homie, what be the weather?|utils:weather
+Hey jarvis, what's the weather|utils:weather
+What's the weather right now?|utils:weather
+Weather me|utils:weather
+Is is supposed to rain today?|utils:weather
+Who am I again?|user:name
+What's my name dude?|user:name
+Hey homie, tell me who I am.|user:name
+What is my full name?|user:name
+Hey jarvis, who's the man?|user:name

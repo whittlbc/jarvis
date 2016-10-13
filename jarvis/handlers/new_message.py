@@ -1,5 +1,4 @@
 from jarvis.core.event import Event
-import jarvis.actions as actions
 from jarvis import logger, predictor
 
 
@@ -18,6 +17,8 @@ def perform(e):
 	# Create an Event class with our known event data
 	event = Event(e['type'], e['text'])
 	
-	# Perform our predicted action, passing in our event
-	action_method = getattr(actions, action)
-	action_method(event)
+	# From our 'module:method' syntax for actions, access this method from this method and call it.
+	module_name, method_name = action.split(':')
+	module = user = __import__('jarvis.actions.{}'.format(module_name), globals(), locals(), ['object'], -1)
+	method = getattr(module, method_name)
+	method(event)
