@@ -21,7 +21,9 @@
             });
 
             socket.on('response', function (response) {
-                $('#log').append('<br>' + $('<div/>').text('Jarvis:  ' + response.data).html());
+                $div = $('<div>', { text: 'Jarvis:  ' + response.data });
+                $div.css('white-space', 'pre-line');
+                $('#log').append('<br>').append($div);
             });
 
             $('#emit').submit(function () {

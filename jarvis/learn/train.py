@@ -27,7 +27,7 @@ def pipeline():
 	return Pipeline([
 		('vect', CountVectorizer()),
 		('tfidf', TfidfTransformer()),
-		('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=5, shuffle=False)),
+		('clf', SGDClassifier(loss='log', penalty='l2', alpha=1e-3, n_iter=5, shuffle=False)),
 	])
 	
 

@@ -20,5 +20,11 @@ class Predictor:
 		# Get the target index for the action predicted by our NN
 		target_index = self.predictor.predict(cleaned_input)[0]
 		
+		# How confident is Jarvis that this is the answer?
+		confidence = max(self.predictor.predict_proba(cleaned_input)[0])
+		
+		# Return None if confidence isn't good enough
+		if not confidence >= 0.5: return None
+		
 		# Return the predicted action
 		return self.actions[target_index]
