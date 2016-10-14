@@ -1,7 +1,7 @@
 import numpy as np
-from definitions import model_path, basedir
+from definitions import model_path
 from jarvis import logger
-from jarvis.learn.utils.dataset import Dataset
+import jarvis.learn.utils.data_prepper as dp
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import SGDClassifier
@@ -9,18 +9,24 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.externals import joblib
 
 
-def perform(test=True):
+def perform():
 	# Create a new grid search classifier from a sci-kit pipeline
-	gs_clf = GridSearchCV(pipeline(), gs_clf_params(), n_jobs=-1)
+	model = GridSearchCV(pipeline(), gs_clf_params(), n_jobs=-1)
 	
-	# Train your classifier
-	train_set, gs_clf = train_model(gs_clf)
+	# Get your training and testing sets of data with 50/50 split
+	(train_data, train_targets), (test_data, test_targets) = dp.get_data()
 	
-	# Test your classifier and log the results unless specifically told not to.
-	if test: test_model(gs_clf)
+	# Train your model
+	model = model.fit(train_data, train_targets)
 	
-	# Save the trained classifier to disk
-	save_model(gs_clf)
+	# Test it's accuracy
+	predictions = model.predict(test_data)
+	
+	# Display the model's accuracy
+	logger.info("\nModel Accuracy: {}\n".format(np.mean(predictions == test_targets)))
+	
+	# Save the trained model to disk
+	save_model(model)
 
 
 def pipeline():
@@ -39,21 +45,5 @@ def gs_clf_params():
 	}
 
 
-def train_model(model):
-	train_set = Dataset(csv=csv_path('train/train.csv'))
-	model = model.fit(train_set.data, train_set.targets)
-	return [train_set, model]
-	
-	
-def test_model(model):
-	test_set = Dataset(csv=csv_path('test/test.csv'))
-	predictions = model.predict(test_set.data)
-	logger.info("\nModel Accuracy: {}\n".format(np.mean(predictions == test_set.targets)))
-	
-
 def save_model(model):
 	joblib.dump(model.best_estimator_, model_path)
-
-
-def csv_path(path):
-	return basedir + '/jarvis/learn/data/' + path
