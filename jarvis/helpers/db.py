@@ -1,8 +1,8 @@
-from jarvis import app
+from configs import configs
 from pymongo import MongoClient
 
-client = MongoClient(app.config.get('MONGODB_URI'))
-db = client[app.config.get('MONGODB_NAME')]
+client = MongoClient(configs.MONGODB_URI)
+db = client[configs.MONGODB_NAME]
 
 
 def find_one(collection, query):
@@ -10,8 +10,8 @@ def find_one(collection, query):
 
 
 def current_user():
-	return find_one('users', { 'email': app.config.get('USER_EMAIL') })
+	return find_one('users', {'email': configs.USER_EMAIL})
 
 
 def service(slug):
-	return find_one('services', { 'slug': slug })
+	return find_one('services', {'slug': slug})

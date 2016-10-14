@@ -2,4 +2,4 @@ from jarvis.core.responder import respond
 
 
 def name(e):
-	respond('Ben Whittle')
+	respond('Ben Whittle', audio=True)

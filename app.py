@@ -5,6 +5,8 @@ from jarvis.helpers import helpers
 from flask.ext.socketio import SocketIO
 import jarvis.handlers.event_handler as event_handler
 import jarvis.learn.train as trainer
+from jarvis.helpers.configs import configs
+
 
 socket = SocketIO(app)
 
@@ -28,5 +30,5 @@ if not os.path.isfile(model_path):
 
 # Start our app
 if __name__ == '__main__':
-	socket.run(app, port=3000, debug=app.config.get('DEBUG'))
+	socket.run(app, port=3000, debug=configs.DEBUG)
 
