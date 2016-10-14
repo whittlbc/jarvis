@@ -17,5 +17,5 @@ def list_actions(e, reason):
 def reason_for_listing_actions(reason):
 	return {
 		'confidence:low': 'Not sure about that one...which action did you want?',
-		'response:incorrect': 'I\'m sorry Ben. What should I have done?'
+		'response:incorrect': 'I\'m sorry, Ben. What should I have done?'
 	}[reason]

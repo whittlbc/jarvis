@@ -20,11 +20,11 @@ class Predictor:
 		# Get the target index for the action predicted by our NN
 		target_index = self.predictor.predict(cleaned_input)[0]
 		
-		confidence = self.predictor.decision_function(cleaned_input)[0]
+		confidence = max(self.predictor.decision_function(cleaned_input)[0])
 		
 		print "Confidence: {}".format(confidence)
 	
-		if max(confidence) < 0.5: return None
+		if confidence < 0.5: return None
 		
 		# Return the predicted action
 		return self.actions[target_index]

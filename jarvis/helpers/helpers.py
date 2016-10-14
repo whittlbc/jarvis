@@ -5,6 +5,7 @@ from definitions import data_path, default_speech_file, s3_speech_path
 from s3 import s3
 from voice import voice
 from configs import configs
+from jarvis.core.event import Event
 
 
 def render_temp(file, **kwargs):
@@ -38,3 +39,10 @@ def tts(text):
 			voice.fetch_voice_fp(text, audio_file)
 
 	s3.upload_file(default_speech_file, configs.S3_BUCKET_NAME, s3_speech_path)
+
+
+# Get an event object for the last user command
+def last_command_event():
+	# TODO: Pull from DB
+	# For now - hardcoding responses to see if it works
+	return Event('message:new', 'What\'s the weather look like right now?')
