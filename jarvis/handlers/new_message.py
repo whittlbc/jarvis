@@ -1,5 +1,6 @@
 from jarvis.core.event import Event
 from jarvis import logger, predictor
+import jarvis.actions.errors as errors
 
 
 def perform(e):
@@ -7,6 +8,11 @@ def perform(e):
 	
 	# Create an Event class with our known event data
 	event = Event(e['type'], e['text'])
+	
+	# If user typed, 'wrong', prompt the user to help correct Jarvis.
+	if event.text.lower().strip() == 'wrong':
+		correct_jarvis(event, 'response:incorrect')
+		return
 	
 	# Load the model if it hasn't already been loaded.
 	predictor.load_model()
@@ -25,6 +31,9 @@ def perform(e):
 		method = getattr(module, method_name)
 		method(event)
 	else:
-		logger.info('Low Confidence')
-		import jarvis.actions.errors as errors
-		errors.low_confidence(event)
+		correct_jarvis(event, 'confidence:low')
+
+
+def correct_jarvis(e, reason):
+	logger.info('Correcting Jarvis for reason: {}'.format(reason))
+	errors.list_actions(e, reason)

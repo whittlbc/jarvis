@@ -2,13 +2,20 @@ from jarvis.core.responder import respond
 import jarvis.helpers.helpers as helpers
 
 
-def low_confidence(e):
+def list_actions(e, reason):
 	count = 1
-	actions = helpers.get_actions() + ['No action']
-	text = "Not sure about that one...which action did you want?\n"
+	actions = helpers.get_actions() + ['Ignore']
+	text = "{}\n".format(reason_for_listing_actions(reason))
 	
 	for action in actions:
 		text += "\n({}) {}".format(count, action)
 		count += 1
 		
 	respond(text)
+	
+
+def reason_for_listing_actions(reason):
+	return {
+		'confidence:low': 'Not sure about that one...which action did you want?',
+		'response:incorrect': 'I\'m sorry Ben. What should I have done?'
+	}[reason]
