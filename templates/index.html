@@ -21,13 +21,17 @@
             });
 
             socket.on('response', function (message) {
-                console.log(message);
                 $div = $('<div>', { text: 'Jarvis:  ' + message.text });
                 $div.css('white-space', 'pre-line');
                 $('#log').append('<br>').append($div);
 
                 if (message.isAudio) {
                     var audioUrl = 'http://confluxapp.s3-website-us-west-1.amazonaws.com/jarvis/speech.ogg?cb=' + new Date().getTime();
+
+                    if (message.data && message.data.soundbite) {
+                        audioUrl = message.data.soundbite;
+                    }
+
                     var audio = new Audio(audioUrl);
                     audio.load();
                     audio.play();
