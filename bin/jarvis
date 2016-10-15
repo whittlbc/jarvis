@@ -11,6 +11,8 @@
 # method to it. The --with-csv flag will also create a new csv for you inside jarvis/data. This is
 # where your dataset for this action will go.
 
+# In ruby cause I felt like it. Deal with it.
+
 
 # ------ Define our helper modules ------
 
