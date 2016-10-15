@@ -1,0 +1,108 @@
+#!/usr/bin/env ruby
+
+
+# ------ Define our helper modules ------
+
+module Actions
+    extend self
+
+    def new(args)
+        return if args[1].nil?
+
+        # Create the specific new_something command
+        specified_cmd = "#{args[0]}_#{args[1]}"
+
+        # Find the method for this specific command on SpecifiedActions
+        specified_method = SpecifiedActions.method(specified_cmd) rescue nil
+        return if specified_method.nil?
+
+        specified_method.call(args)
+    end
+
+end
+
+
+module SpecifiedActions
+    extend self
+
+    def new_command(args)
+        command_info = args[2]
+        return if command_info.nil?
+
+        filename, method = command_info.split(':')
+        return if filename.nil? || method.nil?
+
+        # Create new csv for this command's future dataset if specified:
+        Outcomes.create_new_csv(command_info) if args.include?('--with-csv')
+
+        # Upsert the actions module and module-method specified for this command:
+        Outcomes.upsert_action(filename, method)
+    end
+
+end
+
+module Definitions
+    extend self
+
+    MY_JARVIS_DIR = '/Users/benWhittle/Documents/python/jarvis'
+
+    def dataset_path
+        "#{Dir.pwd}/data"
+    end
+
+    def action_files_path
+        "#{Dir.pwd}/jarvis/actions"
+    end
+
+end
+
+module Helpers
+    extend self
+
+    def new_py_action_method(name)
+        "\n\n\ndef #{name}(e):\n\trespond('You haven\\'t given me a response for this action yet!')"
+    end
+
+end
+
+module Outcomes
+    extend self
+
+    def create_new_csv(name)
+        f_path = "#{Definitions.dataset_path}/#{name}.csv"
+        File.new(f_path, 'w+').close unless File.exists?(f_path)
+    end
+
+    def upsert_action(filename, method)
+        # Form our new action file path
+        f_path = "#{Definitions.action_files_path}/#{filename}.py"
+
+        file_contents = 'from jarvis.core.responder import respond'
+
+        if File.exists?(f_path)
+            f = File.open(f_path, 'r')
+            file_contents = f.read.strip
+            f.close
+        end
+
+        # Append our new method to the current action file contents (if any)
+        file_contents += Helpers.new_py_action_method(method)
+
+        # Write our new contents to our action file
+        f = File.open(f_path, 'w+')
+        f.write(file_contents)
+        f.close
+    end
+
+end
+
+
+
+# ------ Run the command ---------
+
+args = *ARGV
+
+if Dir.pwd == Definitions::MY_JARVIS_DIR && !args.empty?
+    action_method = Actions.method(args[0]) rescue nil
+    action_method.call(args) unless action_method.nil?
+end

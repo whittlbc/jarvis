@@ -116,3 +116,4 @@ hey man, how's the weather today|utils:weather
 is it raining?|utils:weather
 how about those snow flurries?|utils:weather
 weather me that?|utils:weather
+weather ?|utils:weather
