@@ -1,6 +1,17 @@
 #!/usr/bin/env ruby
 
 
+# CLI interface for Jarvis
+
+# USAGE: Right now, great for setting up new command(s) for jarvis in one command.
+
+# Ex: $ jarvis new command uber:request_ride --with-csv
+
+# ^this would upsert new action file inside of jarvis/jarvis/actions and add the 'request_ride'
+# method to it. The --with-csv flag will also create a new csv for you inside jarvis/data. This is
+# where your dataset for this action will go.
+
+
 # ------ Define our helper modules ------
 
 module Actions
@@ -9,7 +20,7 @@ module Actions
     def new(args)
         return if args[1].nil?
 
-        # Create the specific new_something command
+        # Create the specific new_<something> command
         specified_cmd = "#{args[0]}_#{args[1]}"
 
         # Find the method for this specific command on SpecifiedActions
