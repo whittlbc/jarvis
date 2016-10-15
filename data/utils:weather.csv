@@ -112,3 +112,6 @@ weather me homie|utils:weather
 hit me with that weather|utils:weather
 rain tomorrow?|utils:weather
 stormy later?|utils:weather
+hey man, how's the weather today|utils:weather
+is it raining?|utils:weather
+how about those snow flurries?|utils:weather

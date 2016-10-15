@@ -35,7 +35,7 @@ def perform(e):
 		correct_jarvis(event, 'confidence:low')
 		
 	# Cache command message in redis
-	db.update_cache(event.text, action)
+	db.update_msg_cache(event.text, action)
 		
 
 def is_direct_text_match(e):
