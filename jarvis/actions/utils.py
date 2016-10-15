@@ -2,4 +2,4 @@ from jarvis.core.responder import respond
 
 
 def weather(e):
-	respond('The weather is fucking fantastic', audio=False)
+	respond('The weather is fucking fantastic')

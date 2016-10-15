@@ -26,7 +26,7 @@
                 $div.css('white-space', 'pre-line');
                 $('#log').append('<br>').append($div);
 
-                if (message.audio) {
+                if (message.isAudio) {
                     var audioUrl = 'http://confluxapp.s3-website-us-west-1.amazonaws.com/jarvis/speech.ogg?cb=' + new Date().getTime();
                     var audio = new Audio(audioUrl);
                     audio.load();

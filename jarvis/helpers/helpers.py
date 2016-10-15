@@ -6,6 +6,7 @@ from s3 import s3
 from voice import voice
 from configs import configs
 from jarvis.core.event import Event
+import db as db
 
 
 def render_temp(file, **kwargs):
@@ -41,8 +42,27 @@ def tts(text):
 	s3.upload_file(default_speech_file, configs.S3_BUCKET_NAME, s3_speech_path)
 
 
+# get latest message from jarvis and see if it has 'correctMe' == True
+def prev_msg_was_correct_jarvis():
+	# Get Jarvis' oid from his user record
+	jarvis_oid = db.oid(db.get_jarvis())
+	
+	# Get all messages from jarvis
+	last_jarvis_msg = db.messages().find({'user_oid': jarvis_oid}).sort([('ts', -1)]).limit(1)
+	
+	if last_jarvis_msg.count() == 0: return False
+	
+	return last_jarvis_msg[0]['correctMe'] is True
+	
+
 # Get an event object for the last user command
 def last_command_event():
-	# TODO: Pull from DB
-	# For now - hardcoding responses to see if it works
-	return Event('message:new', 'What\'s the weather look like right now?')
+	# Get user's oid from his user record
+	user_oid = db.oid(db.current_user())
+
+	# Find the last user command message
+	msg = db.messages().find({'user_oid': user_oid, 'isCommand': True}).sort([('ts', -1)]).limit(1)
+	
+	if msg.count() == 0: return None
+	
+	return Event('message:new', msg[0]['text'])

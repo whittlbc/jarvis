@@ -11,7 +11,7 @@ def list_actions(e, reason):
 		text += "\n({}) {}".format(count, action)
 		count += 1
 		
-	respond(text)
+	respond(text, correct_me=True)
 	
 
 def reason_for_listing_actions(reason):

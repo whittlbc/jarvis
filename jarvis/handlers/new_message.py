@@ -2,6 +2,7 @@ from jarvis.core.event import Event
 from jarvis import logger, predictor
 import jarvis.actions.errors as errors
 import jarvis.helpers.helpers as helpers
+import jarvis.helpers.db as db
 
 
 def perform(e):
@@ -22,6 +23,9 @@ def perform(e):
 	# Predict an action to perform based on the user's input.
 	action = predictor.predict(user_input)
 	
+	# Save user message
+	db.save_message({'text': event.text, 'isAudio': False}, is_command=True)
+	
 	# Action is only returned if it's confidence is >=0.5
 	if action:
 		# Log the user input and which action was predicted.
@@ -37,6 +41,11 @@ def is_direct_text_match(e):
 	
 	# Is the user correcting Jarvis?
 	if text == 'wrong':
+		# Save user message
+		db.save_message({'text': text, 'isAudio': False})
+		
+		# Tell jarvis to prompt you with list of actions so the user can
+		# tell him what he should've done.
 		correct_jarvis(e, 'response:incorrect')
 		return True
 	
@@ -65,11 +74,8 @@ def user_selecting_action(text):
 	
 	# If the number is in the range of the number of actions + the ignore option...
 	if num > 0 and num <= (len(actions) + 1):
-		# Figure out if Jarvis' last message was a list of actions.
-		prev_msg_was_correct_jarvis = True  # figure this out
-		
-		# Move on if Jarvis wasn't prompting you to correct him.
-		if not prev_msg_was_correct_jarvis: return False
+		# Move on if Jarvis wasn't prompting you to correct him with his last message.
+		if not helpers.prev_msg_was_correct_jarvis(): return False
 		
 		# If the 'Ignore' option was selected, do nothing.
 		if num is (len(actions) + 1): return True
@@ -81,8 +87,13 @@ def user_selecting_action(text):
 		# If no previous command event in memory, move on.
 		if not event: return False
 		
+		# Save user message
+		db.save_message({'text': text, 'isAudio': False})
+		
 		# Perform the correct action on the previous command.
 		run_action(action, event)
+		
+		# Good to save this event text to the file with name = action.
 		
 		return True
 	else:
@@ -94,7 +105,7 @@ def run_action(action, e):
 	module = user = __import__('jarvis.actions.{}'.format(module_name), globals(), locals(), ['object'], -1)
 	method = getattr(module, method_name)
 	method(e)
-
+	
 
 def correct_jarvis(e, reason):
 	logger.info('Correcting Jarvis for reason: {}'.format(reason))
