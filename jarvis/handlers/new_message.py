@@ -16,25 +16,27 @@ def perform(e):
 	
 	# Check for any direct text matches that should take precedent over the trained model.
 	if is_direct_text_match(event): return
-		
+			
 	# Load the model if it hasn't already been loaded.
 	predictor.load_model()
 	
 	# Predict an action to perform based on the user's input.
-	action = predictor.predict(user_input)
+	action, confident = predictor.predict(user_input)
 	
-	# Save user message
+	# Save user message in persistent mongodb
 	db.save_message({'text': event.text, 'isAudio': False}, is_command=True)
-	
-	# Action is only returned if it's confidence is >=0.5
-	if action:
+		
+	if confident:
 		# Log the user input and which action was predicted.
 		logger.info('User Input: {}; Predicted Action: {}'.format(user_input, action))
 		
 		run_action(action, event)
 	else:
 		correct_jarvis(event, 'confidence:low')
-
+		
+	# Cache command message in redis
+	db.update_cache(event.text, action)
+		
 
 def is_direct_text_match(e):
 	text = e.text.lower().strip()

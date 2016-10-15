@@ -1,10 +1,8 @@
-import os
-from definitions import model_path
 from jarvis import app
+import jarvis.learn.train as trainer
 from jarvis.helpers import helpers
 from flask.ext.socketio import SocketIO
 import jarvis.handlers.event_handler as event_handler
-import jarvis.learn.train as trainer
 from jarvis.helpers.configs import configs
 
 
@@ -23,9 +21,8 @@ def new_event(e):
 	event_handler.handle_event(e)
 	
 	
-# Train and save our NN if it doesn't exist yet
-if not os.path.isfile(model_path):
-	trainer.perform()
+# Train our NN
+trainer.perform()
 
 
 # Start our app

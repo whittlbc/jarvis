@@ -1,6 +1,6 @@
+import os
 import numpy as np
-from definitions import model_path
-from jarvis import logger
+from definitions import model_path, data_path
 import jarvis.learn.utils.data_prepper as dp
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -23,7 +23,7 @@ def perform():
 	predictions = model.predict(test_data)
 	
 	# Display the model's accuracy
-	logger.info("\nModel Accuracy: {}\n".format(np.mean(predictions == test_targets)))
+	print "\nModel Accuracy: {}\n".format(np.mean(predictions == test_targets))
 	
 	# Save the trained model to disk
 	save_model(model)
@@ -47,3 +47,29 @@ def gs_clf_params():
 
 def save_model(model):
 	joblib.dump(model.best_estimator_, model_path)
+	
+	
+def get_saved_model():
+	if os.path.isfile(model_path):
+		return joblib.load(model_path, 'r')
+	else:
+		raise 'Error: Can\'t fetch saved model that isn\'t there yet.'
+
+
+def update_train_data(text, target):
+	# Find file for csv based on target
+	path = '{}/{}.csv'.format(data_path, target)
+	
+	# Return if file's not already there
+	if not os.path.isfile(path): return
+	
+	# Get the current data and strip off any leading or trailing new lines
+	with open(path, 'r') as csv:
+		current_data = csv.read().strip()
+	
+	# Concat the new data to the current set
+	new_data = current_data + '\n{}|{}'.format(text, target)
+	
+	# Write the new dataset to the csv
+	with open(path, 'w') as csv:
+		csv.write(new_data)
