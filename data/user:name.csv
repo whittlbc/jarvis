@@ -62,3 +62,5 @@ who are you?|user:name
 and what's your last name?|user:name
 what's my last name?|user:name
 and who are you?|user:name
+your first name is what?|user:name
+what up|user:name
