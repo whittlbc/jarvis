@@ -70,3 +70,8 @@ who am I|user:name
 and what be my first name?|user:name
 what's my full name?|user:name
 my fullname is what?|user:name
+who am I jarvis?|user:name
+and who are you?|user:name
+What's your last name?|user:name
+what's my last name?|user:name
+I want to know what your last name is|user:name

@@ -1,7 +1,7 @@
 import random
 
 
-def all_greetings():
+def greeting():
 	return [
 		'Hey there!',
 		'Greetings!',
@@ -14,7 +14,21 @@ def all_greetings():
 	]
 
 
+def whatup():
+	return [
+		'Not much dude.',
+		'Not much man!',
+		"Just chillin' man"
+	]
+	
+
 def random_greeting():
-	ag = all_greetings()
-	ag_len = len(ag)
-	return ag[random.randint(0, ag_len - 1)]
+	return random_selection(greeting())
+
+
+def random_whatup():
+	return random_selection(whatup())
+
+
+def random_selection(options):
+	return options[random.randint(0, len(options) - 1)]

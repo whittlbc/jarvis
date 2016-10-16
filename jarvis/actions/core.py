@@ -7,4 +7,4 @@ def greeting(m):
 
 
 def whatup(m):
-	respond('You haven\'t given me a response for this action yet!')
+	respond(g.random_whatup())
