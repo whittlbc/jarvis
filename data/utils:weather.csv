@@ -119,3 +119,8 @@ weather me that?|utils:weather
 weather ?|utils:weather
 To whom am I speaking with?|utils:weather
 hi|utils:weather
+what's the weather doe?|utils:weather
+is it supposed to snow later?|utils:weather
+storms later?|utils:weather
+how's the climate?|utils:weather
+how humid is it outside rn?|utils:weather

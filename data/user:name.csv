@@ -64,3 +64,9 @@ what's my last name?|user:name
 and who are you?|user:name
 your first name is what?|user:name
 what up|user:name
+who are you?|user:name
+what's you name?|user:name
+who am I/|user:name
+and what be my first name?|user:name
+what's my full name?|user:name
+my fullname is what?|user:name
