@@ -2,7 +2,7 @@ from jarvis.core.responder import respond
 import jarvis.helpers.helpers as helpers
 
 
-def list_actions(e, reason):
+def list_actions(m, reason):
 	count = 1
 	actions = helpers.get_actions() + ['Ignore']
 	text = "{}\n".format(reason_for_listing_actions(reason))

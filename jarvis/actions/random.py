@@ -1,7 +1,7 @@
 from jarvis.core.responder import respond
 
 
-def yeezy(e):
+def yeezy(m):
 	respond(
 		'Yeezy taught me.',
 		with_audio=True,

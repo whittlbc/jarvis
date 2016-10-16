@@ -1,4 +1,4 @@
-from jarvis.core.event import Event
+from jarvis.core.message import Message
 from jarvis import logger, predictor
 import jarvis.actions.errors as errors
 import jarvis.helpers.helpers as helpers
@@ -9,13 +9,13 @@ def perform(e):
 	user_input = e['text']
 	
 	# Create an Event class with our known event data
-	event = Event(e['type'], e['text'])
+	message = Message(e['text'])
 	
 	# Do nothing if empty text
-	if not event.text.strip(): return
+	if not message.text.strip(): return
 	
 	# Check for any direct text matches that should take precedent over the trained model.
-	if is_direct_text_match(event): return
+	if is_direct_text_match(message): return
 			
 	# Load the model if it hasn't already been loaded.
 	predictor.load_model()
@@ -24,22 +24,22 @@ def perform(e):
 	action, confident = predictor.predict(user_input)
 	
 	# Save user message in persistent mongodb
-	db.save_message({'text': event.text, 'isAudio': False}, is_command=True)
+	db.save_message({'text': message.text, 'isAudio': False}, is_command=True)
 		
 	if confident:
 		# Log the user input and which action was predicted.
 		logger.info('User Input: {}; Predicted Action: {}'.format(user_input, action))
 		
-		run_action(action, event)
+		run_action(action, message)
 	else:
-		correct_jarvis(event, 'confidence:low')
+		correct_jarvis(message, 'confidence:low')
 		
 	# Cache command message in redis
-	db.update_msg_cache(event.text, action)
+	db.update_msg_cache(message.text, action)
 		
 
-def is_direct_text_match(e):
-	text = e.text.lower().strip()
+def is_direct_text_match(m):
+	text = m.text.lower().strip()
 	
 	# Is the user correcting Jarvis?
 	if text == 'wrong':
@@ -48,7 +48,7 @@ def is_direct_text_match(e):
 		
 		# Tell jarvis to prompt you with list of actions so the user can
 		# tell him what he should've done.
-		correct_jarvis(e, 'response:incorrect')
+		correct_jarvis(m, 'response:incorrect')
 		return True
 	
 	if user_selecting_action(text):
@@ -84,16 +84,16 @@ def user_selecting_action(text):
 		
 		# Get the action the user selected.
 		action = actions[num - 1]
-		event = helpers.last_command_event()
+		message = helpers.last_command_msg()
 		
 		# If no previous command event in memory, move on.
-		if not event: return False
+		if not message: return False
 		
 		# Save user message
 		db.save_message({'text': text, 'isAudio': False})
 		
 		# Perform the correct action on the previous command.
-		run_action(action, event)
+		run_action(action, message)
 		
 		# Good to save this event text to the file with name = action.
 		
@@ -102,13 +102,13 @@ def user_selecting_action(text):
 		return False
 		
 
-def run_action(action, e):
+def run_action(action, m):
 	module_name, method_name = action.split(':')
 	module = user = __import__('jarvis.actions.{}'.format(module_name), globals(), locals(), ['object'], -1)
 	method = getattr(module, method_name)
-	method(e)
+	method(m)
 	
 
-def correct_jarvis(e, reason):
+def correct_jarvis(m, reason):
 	logger.info('Correcting Jarvis for reason: {}'.format(reason))
-	errors.list_actions(e, reason)
+	errors.list_actions(m, reason)

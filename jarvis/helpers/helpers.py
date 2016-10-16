@@ -5,7 +5,7 @@ from definitions import data_path, default_speech_file, s3_speech_path
 from s3 import s3
 from voice import voice
 from configs import configs
-from jarvis.core.event import Event
+from jarvis.core.message import Message
 import db as db
 
 
@@ -56,7 +56,7 @@ def prev_msg_was_correct_jarvis():
 	
 
 # Get an event object for the last user command
-def last_command_event():
+def last_command_msg():
 	# Get user's oid from his user record
 	user_oid = db.oid(db.current_user())
 
@@ -65,4 +65,4 @@ def last_command_event():
 	
 	if msg.count() == 0: return None
 	
-	return Event('message:new', msg[0]['text'])
+	return Message(msg[0]['text'])

@@ -1,10 +1,10 @@
 import db as db
 
 
-def name():
-	user = db.current_user()
+def name(is_jarvis=False):
+	if is_jarvis:
+		user = db.get_jarvis()
+	else:
+		user = db.current_user()
+		
 	return user['name']
-
-
-def first_name():
-	return name().split(' ')[0]
