@@ -73,7 +73,7 @@ module Helpers
     extend self
 
     def new_py_action_method(name)
-        "\n\n\ndef #{name}(e):\n\trespond('You haven\\'t given me a response for this action yet!')"
+        "\n\n\ndef #{name}(m):\n\trespond('You haven\\'t given me a response for this action yet!')"
     end
 
 end
