@@ -10,8 +10,9 @@ class Message:
 	
 	def __init__(self, text):
 		self.text = text
+		self.clean_text = text.lower().strip()
 		
-		if self.text.strip():
+		if self.clean_text:
 			self.tagged_text = pos_tag(word_tokenize(text))
 			self.pos_map, self.pos_map_lc = self.create_pos_map()
 		

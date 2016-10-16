@@ -3,6 +3,7 @@ from jarvis import logger, predictor
 import jarvis.actions.errors as errors
 import jarvis.helpers.helpers as helpers
 import jarvis.helpers.db as db
+import re
 
 
 def perform(e):
@@ -14,8 +15,9 @@ def perform(e):
 	# Do nothing if empty text
 	if not message.text.strip(): return
 	
-	# Check for any direct text matches that should take precedent over the trained model.
-	if is_direct_text_match(message): return
+	# Run through our registered text matches, regex patterns, etc.
+	# before using our trained model to make the prediction
+	if has_specified_text_pattern(message): return
 			
 	# Load the model if it hasn't already been loaded.
 	predictor.load_model()
@@ -38,36 +40,63 @@ def perform(e):
 	db.update_msg_cache(message.text, action)
 		
 
-def is_direct_text_match(m):
-	text = m.text.lower().strip()
+def has_specified_text_pattern(m):
+	potential_matches = [
+		new_memory,
+		wrong_answer,
+		selecting_action_from_list
+	]
 	
+	for pm in potential_matches:
+		if pm(m): return True
+		
+	return False
+
+
+def new_memory(m):
+	m = re.search('remember(.*)(as|is)(.*)', m.text, re.I)
+	
+	# Validate findings
+	if not m or len(m.groups()) != 3: return False
+	
+	# Figure out what x and y are from: '... remember x as|is y...'
+	x, y = m.group(1).strip(), m.group(3).strip()
+	
+	# Return if either are empty strings
+	if not x or not y: return False
+	
+	# Add memory to DB
+	db.new_memory(x, y)
+	
+	return True
+	
+
+def wrong_answer(m):
 	# Is the user correcting Jarvis?
-	if text == 'wrong':
+	if m.clean_text == 'wrong':
 		# Save user message
-		db.save_message({'text': text, 'isAudio': False})
+		db.save_message({'text': m.text, 'isAudio': False})
 		
 		# Tell jarvis to prompt you with list of actions so the user can
 		# tell him what he should've done.
 		correct_jarvis(m, 'response:incorrect')
 		return True
-	
-	if user_selecting_action(text):
-		return True
-	
+
 	return False
+	
 
-
-def user_selecting_action(text):
-	textIsInt = True
+def selecting_action_from_list(m):
+	text_is_int = True
+	text = m.clean_text
 	
 	# Check if text can be represented as an integer.
 	try:
 		text = int(text)
 	except ValueError:
-		textIsInt = False
+		text_is_int = False
 
 	# If text isn't an integer representation, return.
-	if not textIsInt: return False
+	if not text_is_int: return False
 	
 	num = text
 	
@@ -90,13 +119,10 @@ def user_selecting_action(text):
 		if not message: return False
 		
 		# Save user message
-		db.save_message({'text': text, 'isAudio': False})
+		db.save_message({'text': m.text, 'isAudio': False})
 		
 		# Perform the correct action on the previous command.
 		run_action(action, message)
-		
-		# Good to save this event text to the file with name = action.
-		
 		return True
 	else:
 		return False

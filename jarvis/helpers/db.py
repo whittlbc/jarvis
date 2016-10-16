@@ -10,8 +10,11 @@ client = MongoClient(configs.MONGODB_URI)
 db = client[configs.MONGODB_NAME]
 
 
-def insert(collection, data):
+def insert(collection, data, remove_from_redis=None):
 	db[collection].insert(data)
+	
+	if remove_from_redis:
+		cache.delete(remove_from_redis)
 
 
 def find_one(collection, query):
@@ -95,3 +98,12 @@ def update_msg_cache(text, action):
 		except:
 			print 'Error parsing message json from cache'
 
+
+def new_memory(x, y):
+	memory = {
+		'key': x,
+		'value': y,
+		'ts': time.time()
+	}
+	
+	insert('memories', memory, remove_from_redis='memories')

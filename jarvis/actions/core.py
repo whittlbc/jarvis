@@ -1,10 +1,10 @@
 from jarvis.core.responder import respond
-import jarvis.helpers.greeting as g
+import jarvis.helpers.responses as r
 
 
 def greeting(m):
-	respond(g.random_greeting())
+	respond(r.random_greeting())
 
 
 def whatup(m):
-	respond(g.random_whatup())
+	respond(r.random_whatup())
