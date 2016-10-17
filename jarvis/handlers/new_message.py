@@ -46,6 +46,7 @@ def matches_text_pattern(m):
 		fetch_memory,
 		new_memory,
 		forget_memory,
+		list_memories,
 		wrong_answer,
 		selecting_action_from_list
 	]
@@ -66,7 +67,7 @@ def fetch_memory(m):
 	if mem_key.endswith('?'):
 		mem_key = mem_key[:-1]
 	
-	mem_val = db.fetch_memory(mem_key)
+	mem_val = db.get_memories().get(mem_key)
 	if not mem_val: return False
 	
 	core.remember(mem_val)
@@ -108,6 +109,12 @@ def forget_memory(m):
 	
 	return True
 	
+
+def list_memories(m):
+	if m.clean_text != 'memories': return False
+	core.list_memories(db.get_memories())
+	return True
+
 
 def wrong_answer(m):
 	# Is the user correcting Jarvis?

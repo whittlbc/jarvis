@@ -20,3 +20,18 @@ def remember(mem_val):
 	
 def forget(memory):
 	respond('Forgetting {}.'.format(memory))
+	
+	
+def list_memories(mem_map):
+	if not mem_map:
+		respond('You haven\'t told me to remember anything yet!')
+	else:
+		keys = list(mem_map)
+		keys.sort()
+		
+		mem_str = ''
+		
+		for k in keys:
+			mem_str += "{}: {}\n".format(k, mem_map[k])
+			
+		respond(mem_str.strip())

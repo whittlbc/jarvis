@@ -118,7 +118,7 @@ def new_memory(x, y):
 	upsert('memories', {'key': x}, {'value': y, 'ts': time.time()}, remove_from_redis='memories')
 	
 
-def fetch_memory(mem_key):
+def get_memories():
 	# First try getting memories from redis
 	memories = cache.get('memories')
 	
@@ -133,10 +133,8 @@ def fetch_memory(mem_key):
 		
 		memories = json.dumps(mem_map)
 		cache.set('memories', memories)
-		
-	memories = json.loads(memories)
 	
-	return memories.get(mem_key)
+	return json.loads(memories)
 
 
 def forget_memory(mem_key):
