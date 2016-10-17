@@ -22,6 +22,10 @@ def upsert(collection, filter, update, remove_from_redis=None):
 	
 	if remove_from_redis:
 		cache.delete(remove_from_redis)
+		
+
+def remove(collection, filter):
+	return db[collection].remove(filter)
 
 
 def find_one(collection, query):
@@ -133,3 +137,12 @@ def fetch_memory(mem_key):
 	memories = json.loads(memories)
 	
 	return memories.get(mem_key)
+
+
+def forget_memory(mem_key):
+	op = remove('memories', {'key': mem_key})
+	had_memory = op['n'] > 0
+	
+	if had_memory: cache.delete(mem_key)
+	
+	return had_memory

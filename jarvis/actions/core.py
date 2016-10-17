@@ -15,4 +15,8 @@ def resp_new_memory(x, y):
 
 
 def remember(mem_val):
-	respond(mem_val, with_audio=True)
+	respond(mem_val)
+	
+	
+def forget(memory):
+	respond('Forgetting {}.'.format(memory))

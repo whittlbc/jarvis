@@ -1,6 +1,7 @@
 from jarvis.core.message import Message
 from jarvis import logger, predictor
 import jarvis.actions.errors as errors
+import jarvis.actions.core as core
 import jarvis.helpers.helpers as helpers
 import jarvis.helpers.db as db
 import re
@@ -44,6 +45,7 @@ def matches_text_pattern(m):
 	potential_matches = [
 		fetch_memory,
 		new_memory,
+		forget_memory,
 		wrong_answer,
 		selecting_action_from_list
 	]
@@ -67,8 +69,7 @@ def fetch_memory(m):
 	mem_val = db.fetch_memory(mem_key)
 	if not mem_val: return False
 	
-	from jarvis.actions.core import remember
-	remember(mem_val)
+	core.remember(mem_val)
 	
 	return True
 	
@@ -89,8 +90,21 @@ def new_memory(m):
 	# Add memory to DB
 	db.new_memory(x.lower(), y)
 	
-	from jarvis.actions.core import resp_new_memory
-	resp_new_memory(x, y)
+	core.resp_new_memory(x, y)
+	
+	return True
+	
+
+def forget_memory(m):
+	m = re.search('forget (.*)', m.text, re.I)
+	if not m: return False
+	
+	x = m.group(1).strip()
+	if x.endswith('.'): x = x[:-1]
+	
+	if not x or not db.forget_memory(x.lower()): return False
+	
+	core.forget(x)
 	
 	return True
 	
