@@ -17,7 +17,7 @@ def perform(e):
 	
 	# Run through our registered text matches, regex patterns, etc.
 	# before using our trained model to make the prediction
-	if has_specified_text_pattern(message): return
+	if matches_text_pattern(message): return
 			
 	# Load the model if it hasn't already been loaded.
 	predictor.load_model()
@@ -40,8 +40,9 @@ def perform(e):
 	db.update_msg_cache(message.text, action)
 		
 
-def has_specified_text_pattern(m):
+def matches_text_pattern(m):
 	potential_matches = [
+		fetch_memory,
 		new_memory,
 		wrong_answer,
 		selecting_action_from_list
@@ -53,11 +54,28 @@ def has_specified_text_pattern(m):
 	return False
 
 
-def new_memory(m):
-	m = re.search('remember(.*)(as|is)(.*)', m.text, re.I)
+def fetch_memory(m):
+	m = re.search('(what is|what\'s) (.*)', m.text, re.I)
+	if not m: return False
 	
-	# Validate findings
-	if not m or len(m.groups()) != 3: return False
+	mem_key = m.group(2).strip().lower()
+	
+	# remove question mark if user added that
+	if mem_key.endswith('?'):
+		mem_key = mem_key[:-1]
+	
+	mem_val = db.fetch_memory(mem_key)
+	if not mem_val: return False
+	
+	from jarvis.actions.core import remember
+	remember(mem_val)
+	
+	return True
+	
+	
+def new_memory(m):
+	m = re.search('remember (.*) (as|is) (.*)', m.text, re.I)
+	if not m: return False
 	
 	# Figure out what x and y are from: '... remember x as|is y...'
 	x, y = m.group(1).strip(), m.group(3).strip()
@@ -66,7 +84,10 @@ def new_memory(m):
 	if not x or not y: return False
 	
 	# Add memory to DB
-	db.new_memory(x, y)
+	db.new_memory(x.lower(), y.lower())
+	
+	from jarvis.actions.core import resp_new_memory
+	resp_new_memory(x, y)
 	
 	return True
 	

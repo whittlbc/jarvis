@@ -21,6 +21,10 @@ def find_one(collection, query):
 	return db[collection].find_one(query)
 
 
+def find_all(collection):
+	return list(db[collection].find())
+
+
 def messages():
 	return db['messages']
 
@@ -107,3 +111,24 @@ def new_memory(x, y):
 	}
 	
 	insert('memories', memory, remove_from_redis='memories')
+	
+
+def fetch_memory(mem_key):
+	# First try getting memories from redis
+	memories = cache.get('memories')
+	
+	# if the memories key doesn't exist yet in redis, we should get the memory
+	# results from mongodb and store them under 'memory' key in redis (even if empty array).
+	if memories is None:
+		memories = find_all('memories')
+		mem_map = {}
+		
+		for mem in memories:
+			mem_map[mem['key']] = mem['value']
+		
+		memories = json.dumps(mem_map)
+		cache.set('memories', memories)
+		
+	memories = json.loads(memories)
+	
+	return memories.get(mem_key)
