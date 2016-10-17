@@ -17,6 +17,13 @@ def insert(collection, data, remove_from_redis=None):
 		cache.delete(remove_from_redis)
 
 
+def upsert(collection, filter, update, remove_from_redis=None):
+	db[collection].update_one(filter, {'$set': update}, upsert=True)
+	
+	if remove_from_redis:
+		cache.delete(remove_from_redis)
+
+
 def find_one(collection, query):
 	return db[collection].find_one(query)
 
@@ -104,13 +111,7 @@ def update_msg_cache(text, action):
 
 
 def new_memory(x, y):
-	memory = {
-		'key': x,
-		'value': y,
-		'ts': time.time()
-	}
-	
-	insert('memories', memory, remove_from_redis='memories')
+	upsert('memories', {'key': x}, {'value': y, 'ts': time.time()}, remove_from_redis='memories')
 	
 
 def fetch_memory(mem_key):

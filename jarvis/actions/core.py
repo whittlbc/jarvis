@@ -11,7 +11,7 @@ def whatup(m):
 
 
 def resp_new_memory(x, y):
-	respond('Got it! Remembering {} as {}.'.format(x, y), with_audio=True)
+	respond('Got it! Remembering {} as {}.'.format(x, y))
 
 
 def remember(mem_val):

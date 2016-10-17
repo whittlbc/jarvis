@@ -72,7 +72,7 @@ def fetch_memory(m):
 	
 	return True
 	
-	
+
 def new_memory(m):
 	m = re.search('remember (.*) (as|is) (.*)', m.text, re.I)
 	if not m: return False
@@ -80,11 +80,14 @@ def new_memory(m):
 	# Figure out what x and y are from: '... remember x as|is y...'
 	x, y = m.group(1).strip(), m.group(3).strip()
 	
+	if x.startswith('that '): x = x[5:]
+	if y.endswith('.'): y = y[:-1]
+	
 	# Return if either are empty strings
 	if not x or not y: return False
 	
 	# Add memory to DB
-	db.new_memory(x.lower(), y.lower())
+	db.new_memory(x.lower(), y)
 	
 	from jarvis.actions.core import resp_new_memory
 	resp_new_memory(x, y)
