@@ -48,6 +48,7 @@ def matches_text_pattern(m):
 		forget_memory,
 		list_memories,
 		wrong_answer,
+		airhorn,
 		selecting_action_from_list
 	]
 	
@@ -129,6 +130,16 @@ def wrong_answer(m):
 
 	return False
 	
+	
+def airhorn(m):
+	m = re.search('airhorn', m.text, re.I)
+	if not m: return False
+	
+	from jarvis.actions.random import airhorn_resp
+	airhorn_resp(m)
+	
+	return True
+
 
 def selecting_action_from_list(m):
 	text_is_int = True
