@@ -19,3 +19,7 @@ def airhorn_resp(m):
 			'soundbite': 'http://confluxapp.s3-website-us-west-1.amazonaws.com/jarvis/airhorn.mp3'
 		}
 	)
+	
+
+def echo_resp(m):
+	respond(m.text[5:])

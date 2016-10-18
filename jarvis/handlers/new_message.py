@@ -47,8 +47,9 @@ def matches_text_pattern(m):
 		new_memory,
 		forget_memory,
 		list_memories,
-		wrong_answer,
 		airhorn,
+		echo,
+		wrong_answer,
 		selecting_action_from_list
 	]
 	
@@ -139,6 +140,13 @@ def airhorn(m):
 	airhorn_resp(m)
 	
 	return True
+
+
+def echo(m):
+	if m.clean_text.startswith('echo '):
+		from jarvis.actions.random import echo_resp
+		echo_resp(m)
+		return True
 
 
 def selecting_action_from_list(m):
