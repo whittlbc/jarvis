@@ -5,7 +5,8 @@ import jarvis.helpers.db as db
 
 def respond(text, with_audio=False, data=None, correct_me=False):
 	# Upload the text as audio if specified
-	if with_audio: tts(text)
+	if with_audio:
+		tts(text)
 	
 	# Data to be sent back to client
 	message = {
