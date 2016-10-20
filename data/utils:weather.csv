@@ -135,3 +135,10 @@ how's the weather|utils:weather
 how's the weather|utils:weather
 dude is it going to rain tomorrow|utils:weather
 how's the weather|utils:weather
+how's the weather?|utils:weather
+How's the weather outisde?|utils:weather
+how's the weather today?|utils:weather
+Is it gonna rain today?|utils:weather
+How's the weather today?|utils:weather
+Is it raining right now?|utils:weather
+How's the weather in CA right now?|utils:weather

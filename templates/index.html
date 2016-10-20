@@ -20,9 +20,22 @@
     var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
     var recognition = new SpeechRecognition();
 
+    var speech = new SpeechSynthesisUtterance();
+    speech.volume = 1;
+    speech.rate = 0.78;
+    speech.pitch = 1.3;
+
+    var voices = {};
+
     function startRecording () {
       recognition.start();
     }
+
+    window.speechSynthesis.onvoiceschanged = function() {
+      window.speechSynthesis.getVoices().map(function (voice) {
+        voices[voice.name] = voice;
+      });
+    };
 
     $(document).ready(function () {
       var namespace = '/master';
@@ -39,20 +52,25 @@
       });
 
       socket.on('response', function (message) {
-        $div = $('<div>', {text: 'Jarvis:  ' + message.text});
+        var text = message.text;
+
+        $div = $('<div>', {text: 'Jarvis:  ' + text});
         $div.css('white-space', 'pre-line');
         $('#log').append('<br>').append($div);
 
         if (message.isAudio) {
-          var audioUrl = 'http://confluxapp.s3-website-us-west-1.amazonaws.com/jarvis/speech.ogg?cb=' + new Date().getTime();
-
-          if (message.data && message.data.soundbite) {
-            audioUrl = message.data.soundbite;
+          // if a soundbite needs to be played, play that.
+          if ((message.data || {}).soundbite) {
+            var audio = new Audio(message.data.soundbite);
+            audio.load();
+            audio.play();
           }
-
-          var audio = new Audio(audioUrl);
-          audio.load();
-          audio.play();
+          // otherwise, just voice the response.
+          else {
+            speech.voice = voices['Karen'];
+            speech.text = text;
+            window.speechSynthesis.speak(speech);
+          }
         }
       });
 
