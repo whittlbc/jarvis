@@ -144,3 +144,7 @@ and what's your last name?|user:name
 who am i speaking with?|user:name
 who am i speaking to?|user:name
 hey what's up?|user:name
+who are you|user:name
+who am I|user:name
+who are you|user:name
+what's your last name|user:name

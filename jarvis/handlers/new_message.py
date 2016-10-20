@@ -28,11 +28,11 @@ def perform(e):
 	
 	# Save user message in persistent mongodb
 	db.save_message({'text': message.text, 'isAudio': False}, is_command=True)
-		
+	
+	logger.info("User Input: {};\nPredicted Action: {}".format(user_input, action))
+	
 	if confident:
 		# Log the user input and which action was predicted.
-		logger.info('User Input: {}; Predicted Action: {}'.format(user_input, action))
-		
 		run_action(action, message)
 	else:
 		correct_jarvis(message, 'confidence:low')
@@ -133,7 +133,7 @@ def wrong_answer(m):
 	
 	
 def airhorn(m):
-	m = re.search('airhorn', m.text, re.I)
+	m = re.search('(airhorn|air horn)', m.text, re.I)
 	if not m: return False
 	
 	from jarvis.actions.random import airhorn_resp

@@ -1,11 +1,11 @@
 from nltk import pos_tag, word_tokenize
 from nltk.data import load
 tagdict = load('help/tagsets/upenn_tagset.pickle')
-from nltk.internals import find_jars_within_path
-from nltk.parse.stanford import StanfordParser
-parser = StanfordParser(model_path="edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
-stanford_dir = parser._classpath[0].rpartition('/')[0]
-parser._classpath = tuple(find_jars_within_path(stanford_dir))
+# from nltk.internals import find_jars_within_path
+# from nltk.parse.stanford import StanfordParser
+# parser = StanfordParser(model_path="edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
+# stanford_dir = parser._classpath[0].rpartition('/')[0]
+# parser._classpath = tuple(find_jars_within_path(stanford_dir))
 
 
 class Message:
@@ -88,7 +88,7 @@ class Message:
 				
 		return None
 	
-	def get_tree(self):
-		tree = self.tree or list(parser.raw_parse(self.text))[0]
-		self.tree = tree
-		return tree
+	# def get_tree(self):
+	# 	tree = self.tree or list(parser.raw_parse(self.text))[0]
+	# 	self.tree = tree
+	# 	return tree
