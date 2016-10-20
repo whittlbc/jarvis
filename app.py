@@ -20,7 +20,7 @@ def index():
 def new_event(e):
 	event_handler.handle_event(e)
 	
-	
+	 
 # Train our NN
 trainer.perform()
 
