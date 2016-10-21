@@ -89,7 +89,7 @@ def fetch_memory(m):
 
 def new_memory(m):
 	matches = re.search(
-		'(remember that|remember) (.*) (as|is on|is at|is|was on|was at|was|will be on|will be at|will be) (.*)',
+		'(remember that|remember) (.*) (as|is on|is in|is at|is|was on|was in|was at|was|will be on|will be in|will be at|will be) (.*)',
 		m.text,
 		re.I
 	)
@@ -124,7 +124,10 @@ def get_attr_type(m, memory, verb_phrase):
 		'will be on': 'when',
 		'is at': 'where',
 		'was at': 'where',
-		'will be at': 'where'
+		'will be at': 'where',
+		'is in': 'where',
+		'was in': 'where',
+		'will be in': 'where'
 	}
 	
 	attr_type = when_where_map.get(verb_phrase)
