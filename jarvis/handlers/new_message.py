@@ -60,19 +60,29 @@ def matches_text_pattern(m):
 
 
 def fetch_memory(m):
-	matches = re.search('(what is|what\'s) (.*)', m.text, re.I)
+	matches = re.search('(what is|what\'s|who is|who\'s|where is|where\'s|when is|when\'s) (.*)', m.text, re.I)
 	if not matches: return False
+	
+	wh = matches.group(1).lower()
+	
+	if wh == 'who is' or wh == 'who\'s':
+		attr_type = 'who'
+	elif wh == 'what is' or wh == 'what\'s':
+		attr_type = 'what'
+	elif wh == 'when is' or wh == 'when\'s':
+		attr_type = 'when'
+	elif wh == 'where is' or wh == 'where\'s':
+		attr_type = 'where'
 	
 	mem_key = matches.group(2).strip().lower()
 	
-	# remove question mark if user added that
-	if mem_key.endswith('?'):
+	if mem_key[-1] in ('.', '?', '!'):
 		mem_key = mem_key[:-1]
+
+	memory = db.get_memory(mem_key.lower(), attr_type)
 	
-	mem_val = db.get_memories().get(mem_key)
-	if not mem_val: return False
-	
-	core.remember(mem_val)
+	if not memory: return False
+	core.remember(memory)
 	
 	return True
 	

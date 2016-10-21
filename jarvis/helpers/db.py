@@ -115,25 +115,45 @@ def update_msg_cache(text, action):
 
 
 def update_memory_attrs(mem_key, new_attrs):
-	update('memories', {'key': mem_key}, {'attrs': new_attrs}, remove_from_redis='memories')
+	update('memories', {'key': {'orig': mem_key, 'lower': mem_key.lower()}}, {'attrs': new_attrs}, remove_from_redis='memories')
 
 
 def insert_new_memory(mem_key, attr_type, attr_value):
 	new_memory = {
-		'key': mem_key,
+		'key': {
+			'orig': mem_key,
+			'lower': mem_key.lower()
+		},
 		'attrs': {
-			'who': '',
-			'what': '',
-			'when': '',
-			'where': ''
+			'who': {
+				'orig': '',
+				'lower': ''
+			},
+			'what': {
+				'orig': '',
+				'lower': ''
+			},
+			'when': {
+				'orig': '',
+				'lower': ''
+			},
+			'where': {
+				'orig': '',
+				'lower': ''
+			}
 		},
 		'ts': time.time()
 	}
 	
-	new_memory['attrs'][attr_type] = attr_value
+	attr_value_map = {
+		'orig': attr_value,
+		'lower': attr_value.lower()
+	}
+	
+	new_memory['attrs'][attr_type] = attr_value_map
 	
 	if attr_type == 'who':
-		new_memory['attrs']['what'] = attr_value
+		new_memory['attrs']['what'] = attr_value_map
 	
 	insert('memories', new_memory, remove_from_redis='memories')
 
@@ -142,18 +162,61 @@ def update_memory(mem_key, attr_type, attr_value):
 	memories = cache.get('memories')
 	
 	if memories is None:
-		memory = find_one('memories', {'key': mem_key}) or {}
+		memory = find_one('memories', {'key': {'lower': mem_key.lower()}}) or {}
 		current_mem_attrs = memory.get('attrs')
 	else:
 		memories = json.loads(memories)
-		current_mem_attrs = memories.get(mem_key)
+		current_mem_attrs = memories.get(mem_key.lower())
 		
 	if current_mem_attrs:
 		new_attrs = dict(current_mem_attrs)
-		new_attrs[attr_type] = attr_value
+		
+		new_attrs[attr_type] = {
+			'orig': attr_value,
+			'lower': attr_value.lower()
+		}
+		
 		update_memory_attrs(mem_key, new_attrs)
 	else:
 		insert_new_memory(mem_key, attr_type, attr_value)
+
+
+def get_memory(subject, wh):
+	memories = cache.get('memories')
+	
+	if memories is None:
+		memories = find_all('memories')
+		mem_map = {}
+		
+		for mem in memories:
+			mem_map[mem['key']['lower']] = {
+				'orig': mem['key']['orig'],
+				'attrs': mem['attrs']
+			}
+		
+		memories = json.dumps(mem_map)
+		cache.set('memories', memories)
+		
+	memories = json.loads(memories)
+	
+	# First try to find a memory with key, <subject>.
+	memory = memories.get(subject)
+	
+	if memory: return memory['attrs'][wh]['orig']
+	
+	keys = []
+	
+	# import code; code.interact(local=dict(globals(), **locals()))
+	
+	if wh == 'who' or wh == 'what':
+		for k, v in memories.iteritems():
+			if v['attrs'][wh]['lower'] == subject:
+				keys.append(v['orig'])
+
+	if len(keys) > 2:
+		return ', '.join(keys[:-1]) + ', and ' + keys[-1]
+	else:
+		return ' and '.join(keys)
 
 
 def get_memories():
@@ -167,8 +230,11 @@ def get_memories():
 		mem_map = {}
 		
 		for mem in memories:
-			mem_map[mem['key']] = mem['value']
-		
+			mem_map[mem['key']['lower']] = {
+				'orig': mem['key']['orig'],
+				'attrs': mem['attrs']
+			}
+			
 		memories = json.dumps(mem_map)
 		cache.set('memories', memories)
 	
@@ -176,7 +242,7 @@ def get_memories():
 
 
 def forget_memory(mem_key):
-	op = remove('memories', {'key': mem_key})
+	op = remove('memories', {'key': {'lower': mem_key}})
 	had_memory = op['n'] > 0
 	
 	if had_memory: cache.delete(mem_key)

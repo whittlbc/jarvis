@@ -66,3 +66,20 @@ def last_command_msg():
 	if msg.count() == 0: return None
 	
 	return Message(msg[0]['text'])
+
+
+def perspective_swap(text):
+	swap_map = {
+		'my': 'your',
+		'your': 'my',
+		'mine': 'yours',
+		'yours': 'mine'
+	}
+	
+	words = []
+
+	for word in text.split(' '):
+		word = swap_map.get(word) or word
+		words.append(word)
+	
+	return ' '.join(words)

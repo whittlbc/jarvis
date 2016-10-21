@@ -3,7 +3,7 @@ from jarvis.helpers.helpers import tts
 import jarvis.helpers.db as db
 
 
-def respond(text, with_audio=True, data=None, correct_me=False):
+def respond(text, with_audio=False, data=None, correct_me=False):
 	# Upload the text as audio if specified
 	# if with_audio:
 		# tts(text)

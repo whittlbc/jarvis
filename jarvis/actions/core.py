@@ -1,5 +1,6 @@
 from jarvis.core.responder import respond
 import jarvis.helpers.responses as r
+import jarvis.helpers.helpers as helpers
 
 
 def greeting(m):
@@ -11,11 +12,18 @@ def whatup(m):
 
 
 def resp_new_memory(memory, verb_phrase, attr_value):
+	if verb_phrase == 'as':
+		verb_phrase = 'is'
+		
+	memory = helpers.perspective_swap(memory)
+	attr_value = helpers.perspective_swap(attr_value)
+		
 	respond('Got it! Remembering that {} {} {}.'.format(memory, verb_phrase, attr_value), with_audio=True)
 
 
-def remember(mem_val):
-	respond(mem_val, with_audio=True)
+def remember(memory):
+	memory = helpers.perspective_swap(memory)
+	respond(memory, with_audio=True)
 	
 	
 def forget(memory):
