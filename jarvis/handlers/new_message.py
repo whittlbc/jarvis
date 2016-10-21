@@ -60,10 +60,10 @@ def matches_text_pattern(m):
 
 
 def fetch_memory(m):
-	m = re.search('(what is|what\'s) (.*)', m.text, re.I)
-	if not m: return False
+	matches = re.search('(what is|what\'s) (.*)', m.text, re.I)
+	if not matches: return False
 	
-	mem_key = m.group(2).strip().lower()
+	mem_key = matches.group(2).strip().lower()
 	
 	# remove question mark if user added that
 	if mem_key.endswith('?'):
@@ -78,25 +78,51 @@ def fetch_memory(m):
 	
 
 def new_memory(m):
-	m = re.search('remember (.*) (as|is) (.*)', m.text, re.I)
-	if not m: return False
+	matches = re.search(
+		'(remember that|remember) (.*) (as|is on|is at|is|was on|was at|was|will be on|will be at|will be) (.*)',
+		m.text,
+		re.I
+	)
 	
-	# Figure out what x and y are from: '... remember x as|is y...'
-	x, y = m.group(1).strip(), m.group(3).strip()
+	if not matches: return False
 	
-	if x.startswith('that '): x = x[5:]
-	if y.endswith('.'): y = y[:-1]
+	memory = matches.group(2).strip()
+	verb_phrase = matches.group(3)
 	
-	# Return if either are empty strings
-	if not x or not y: return False
+	# Decide what attribute type is being defined about the memory: who, what, when, or where.
+	attr_type = get_attr_type(m, memory, verb_phrase)
+	attr_value = m.group(4).strip()
+	
+	if not attr_value: return False
+	
+	if attr_value[-1] in ('.', '?', '!'):
+		attr_value = attr_value[:-1]
+	
+	# Respond
+	core.resp_new_memory(memory, verb_phrase, attr_value)
 	
 	# Add memory to DB
-	db.new_memory(x.lower(), y)
-	
-	core.resp_new_memory(x, y)
+	db.update_memory(memory, attr_type, attr_value)
 	
 	return True
 	
+
+def get_attr_type(m, memory, verb_phrase):
+	when_where_map = {
+		'is on': 'when',
+		'was on': 'when',
+		'will be on': 'when',
+		'is at': 'where',
+		'was at': 'where',
+		'will be at': 'where'
+	}
+	
+	attr_type = when_where_map.get(verb_phrase)
+	
+	if attr_type: return attr_type  # when or where
+	if m.is_person(memory): return 'who'
+	return 'what'
+
 
 def forget_memory(m):
 	m = re.search('forget (.*)', m.text, re.I)

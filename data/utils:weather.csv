@@ -140,3 +140,5 @@ Is it gonna rain today?|utils:weather
 How's the weather today?|utils:weather
 Is it raining right now?|utils:weather
 How's the weather in CA right now?|utils:weather
+how's the weather today?|utils:weather
+wanna tell me if it's gonna rain tmw?|utils:weather

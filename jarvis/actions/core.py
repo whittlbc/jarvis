@@ -10,8 +10,8 @@ def whatup(m):
 	respond(r.random_whatup())
 
 
-def resp_new_memory(x, y):
-	respond('Got it! Remembering {} as {}.'.format(x, y), with_audio=True)
+def resp_new_memory(memory, verb_phrase, attr_value):
+	respond('Got it! Remembering that {} {} {}.'.format(memory, verb_phrase, attr_value), with_audio=True)
 
 
 def remember(mem_val):

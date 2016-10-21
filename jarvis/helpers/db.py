@@ -114,9 +114,17 @@ def update_msg_cache(text, action):
 			print 'Error parsing message json from cache'
 
 
-def new_memory(x, y):
-	upsert('memories', {'key': x}, {'value': y, 'ts': time.time()}, remove_from_redis='memories')
+# def new_memory(x, y):
+# 	upsert('memories', {'key': x}, {'value': y, 'ts': time.time()}, remove_from_redis='memories')
 	
+	
+def update_memory(memory, attr_type, attr_value):
+	# If memory exists in cache, update that data, save to DB, and delete cache.
+	# if no memories key in cache, find record from DB, modify it and update it
+	# if memories key exists in cache, but that specific memory does not, you know it's a new memory,
+	# so just do an insert to memories in the DB, and then delete the cache
+	print 'placeholder'
+
 
 def get_memories():
 	# First try getting memories from redis
