@@ -22,7 +22,6 @@ who am i again?|user:name
 what be my name|user:name
 what be my namesies|user:name
 my name be what?|user:name
-who yo daddy though?|user:name
 and who am i?|user:name
 say my name for me buddy|user:name
 and what's my name again?|user:name
@@ -63,7 +62,6 @@ and what's your last name?|user:name
 what's my last name?|user:name
 and who are you?|user:name
 your first name is what?|user:name
-what up|user:name
 who are you?|user:name
 what's you name?|user:name
 who am I|user:name
@@ -120,7 +118,6 @@ and who the fuck are you?|user:name
 who are you?|user:name
 who the fuck are you?|user:name
 who the fuck are you?|user:name
-what up|user:name
 who are you?|user:name
 got a first name?|user:name
 hey jarvis name me|user:name
@@ -132,8 +129,6 @@ AND TELL ME YOUR LAST NAME|user:name
 TELL ME YOUR FIRST NAME|user:name
 TELL ME YOUR LAST NAME|user:name
 who are you?|user:name
-who are you?|user:name
-who am I?|user:name
 who am i?|user:name
 what's my first name dude?|user:name
 what's my last name?|user:name
@@ -143,12 +138,10 @@ and what is your last nae?|user:name
 and what's your last name?|user:name
 who am i speaking with?|user:name
 who am i speaking to?|user:name
-hey what's up?|user:name
 who are you|user:name
 who am I|user:name
 who are you|user:name
 what's your last name|user:name
-what the fuck|user:name
 who am I?|user:name
 Who am i?|user:name
 who am i again?|user:name
@@ -164,9 +157,24 @@ who are you?|user:name
 Who are you?|user:name
 what is your last name?|user:name
 and what is my name?|user:name
-what's cracking homie?|user:name
 who are you?|user:name
 who am I|user:name
 and who are you|user:name
 who are you?|user:name
 and who am i|user:name
+Who is my buddy|user:name
+who is my buddy|user:name
+who are you?|user:name
+Who am I/|user:name
+what's my name?|user:name
+what's my first name?|user:name
+my last name|user:name
+your last name|user:name
+do you have a first name?|user:name
+who are you again?|user:name
+who are you speaking with?|user:name
+what should I call you?|user:name
+what should i call you?|user:name
+what do you call me?|user:name
+say my name|user:name
+TELL MY MY LAST NAME|user:name

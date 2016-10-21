@@ -115,7 +115,7 @@ def update_msg_cache(text, action):
 
 
 def update_memory_attrs(mem_key, new_attrs):
-	update('memories', {'key': {'orig': mem_key, 'lower': mem_key.lower()}}, {'attrs': new_attrs}, remove_from_redis='memories')
+	update('memories', {'key.lower': mem_key.lower()}, {'attrs': new_attrs}, remove_from_redis='memories')
 
 
 def insert_new_memory(mem_key, attr_type, attr_value):
@@ -162,22 +162,24 @@ def update_memory(mem_key, attr_type, attr_value):
 	memories = cache.get('memories')
 	
 	if memories is None:
-		memory = find_one('memories', {'key': {'lower': mem_key.lower()}}) or {}
-		current_mem_attrs = memory.get('attrs')
+		# Get memory from DB since 'memories' NOT in redis
+		memory = find_one('memories', {'key.lower': mem_key.lower()}) or {}
 	else:
-		memories = json.loads(memories)
-		current_mem_attrs = memories.get(mem_key.lower())
+		# Get memory from redis
+		memory = json.loads(memories).get(mem_key.lower()) or {}
 		
-	if current_mem_attrs:
-		new_attrs = dict(current_mem_attrs)
-		
-		new_attrs[attr_type] = {
+	attrs = memory.get('attrs')
+	
+	if attrs:
+		# if attrs already exist, just update the one you need to:
+		attrs[attr_type] = {
 			'orig': attr_value,
 			'lower': attr_value.lower()
 		}
 		
-		update_memory_attrs(mem_key, new_attrs)
+		update_memory_attrs(mem_key, attrs)
 	else:
+		# otherwise, create a new memory from scratch
 		insert_new_memory(mem_key, attr_type, attr_value)
 
 
@@ -242,7 +244,7 @@ def get_memories():
 
 
 def forget_memory(mem_key):
-	op = remove('memories', {'key': {'lower': mem_key}})
+	op = remove('memories', {'key.lower': mem_key})
 	had_memory = op['n'] > 0
 	
 	if had_memory: cache.delete(mem_key)
