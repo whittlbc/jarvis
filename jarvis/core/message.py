@@ -95,10 +95,14 @@ class Message:
 		return tree
 	
 	def is_person(self, subject):
-		chunked_nes = ne_chunk(self.tagged_text)
+		if subject not in self.text: return False
+		
+		proper_subject = subject.title()
+		text = self.text.replace(subject, proper_subject)
+		chunked_nes = ne_chunk(self.tag_text(text))
 		
 		for ne in chunked_nes:
-			if isinstance(ne, nltk.tree.Tree) and ne.leaves()[0][0] == subject:
+			if isinstance(ne, nltk.tree.Tree) and ne.leaves()[0][0] == proper_subject:
 				return ne.label() == 'PERSON'
 			
 		return False
