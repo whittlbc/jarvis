@@ -20,4 +20,3 @@ def respond(text, with_audio=True, data=None, correct_me=False):
 	
 	# Store message in db
 	db.save_message(message, from_jarvis=True, correct_me=correct_me)
-

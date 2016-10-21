@@ -17,8 +17,8 @@ def insert(collection, data, remove_from_redis=None):
 		cache.delete(remove_from_redis)
 
 
-def upsert(collection, filter, update, remove_from_redis=None):
-	db[collection].update_one(filter, {'$set': update}, upsert=True)
+def update(collection, filter, updates, remove_from_redis=None):
+	db[collection].update_one(filter, {'$set': updates})
 	
 	if remove_from_redis:
 		cache.delete(remove_from_redis)
@@ -114,16 +114,46 @@ def update_msg_cache(text, action):
 			print 'Error parsing message json from cache'
 
 
-# def new_memory(x, y):
-# 	upsert('memories', {'key': x}, {'value': y, 'ts': time.time()}, remove_from_redis='memories')
+def update_memory_attrs(mem_key, new_attrs):
+	update('memories', {'key': mem_key}, {'attrs': new_attrs}, remove_from_redis='memories')
+
+
+def insert_new_memory(mem_key, attr_type, attr_value):
+	new_memory = {
+		'key': mem_key,
+		'attrs': {
+			'who': '',
+			'what': '',
+			'when': '',
+			'where': ''
+		},
+		'ts': time.time()
+	}
 	
+	new_memory['attrs'][attr_type] = attr_value
 	
-def update_memory(memory, attr_type, attr_value):
-	# If memory exists in cache, update that data, save to DB, and delete cache.
-	# if no memories key in cache, find record from DB, modify it and update it
-	# if memories key exists in cache, but that specific memory does not, you know it's a new memory,
-	# so just do an insert to memories in the DB, and then delete the cache
-	print 'placeholder'
+	if attr_type == 'who':
+		new_memory['attrs']['what'] = attr_value
+	
+	insert('memories', new_memory, remove_from_redis='memories')
+
+
+def update_memory(mem_key, attr_type, attr_value):
+	memories = cache.get('memories')
+	
+	if memories is None:
+		memory = find_one('memories', {'key': mem_key}) or {}
+		current_mem_attrs = memory.get('attrs')
+	else:
+		memories = json.loads(memories)
+		current_mem_attrs = memories.get(mem_key)
+		
+	if current_mem_attrs:
+		new_attrs = dict(current_mem_attrs)
+		new_attrs[attr_type] = attr_value
+		update_memory_attrs(mem_key, new_attrs)
+	else:
+		insert_new_memory(mem_key, attr_type, attr_value)
 
 
 def get_memories():

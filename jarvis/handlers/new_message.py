@@ -91,7 +91,7 @@ def new_memory(m):
 	
 	# Decide what attribute type is being defined about the memory: who, what, when, or where.
 	attr_type = get_attr_type(m, memory, verb_phrase)
-	attr_value = m.group(4).strip()
+	attr_value = matches.group(4).strip()
 	
 	if not attr_value: return False
 	
