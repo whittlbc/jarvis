@@ -186,3 +186,7 @@ Jarvis who are you|user:name
 who're you?|user:name
 Jarvis who's my buddy|user:name
 jarvis who are you|user:name
+jarvis what's your last name|user:name
+siri what's your name|user:name
+siri what's my name|user:name
+eliza what's your name|user:name

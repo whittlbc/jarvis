@@ -16,8 +16,8 @@
 <h2>Receive:</h2>
 <div id="log"></div>
   <script type="text/javascript">
+    var name = 'eliza';
     var socket;
-
     var speech = new SpeechSynthesisUtterance();
     speech.volume = 1;
     speech.rate = 0.79;
@@ -77,18 +77,21 @@
 
       if (annyang) {
         var starters = [
-          'jarvis',
-          'hey jarvis',
-          'yo jarvis',
-          'and jarvis',
-          'yea jarvis',
-          'yeah jarvis',
-          'you jarvis',
-          'your jarvis',
-          'ya jarvis',
-          'oh jarvis',
-          'ok jarvis',
-          'okay jarvis'
+          '',
+          'hey',
+          'yo',
+          'and',
+          'yea',
+          'yeah',
+          'you',
+          'your',
+          'yours',
+          'I',
+          'me',
+          'ya',
+          'oh',
+          'ok',
+          'okay'
         ];
 
         annyang.addCallback('result', function (potential_transcripts) {
@@ -99,7 +102,7 @@
             var match = false;
 
             for (var j = 0; j < starters.length; j++) {
-              if (guess.startsWith(starters[j])) {
+              if (guess.startsWith(starters[j] + name)) {
                 emit('message:new', { text: guess });
                 match = true;
                 break;
