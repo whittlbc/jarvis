@@ -1,6 +1,6 @@
 from jarvis import app
+from flask import render_template
 import jarvis.learn.train as trainer
-from jarvis.helpers import helpers
 from flask.ext.socketio import SocketIO
 import jarvis.handlers.event_handler as event_handler
 from jarvis.helpers.configs import configs
@@ -12,7 +12,7 @@ socket = SocketIO(app)
 # Set up HTTP routes
 @app.route('/')
 def index():
-	return helpers.render_temp('index.html')
+	return render_template('index.html')
 
 
 # Set up socket listeners
@@ -20,7 +20,7 @@ def index():
 def new_event(e):
 	event_handler.handle_event(e)
 	
-	 
+
 # Train our NN
 trainer.perform()
 

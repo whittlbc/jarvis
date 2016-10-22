@@ -1,18 +1,11 @@
 import pandas
 import glob
-from jinja2 import Environment, FileSystemLoader
 from definitions import data_path, default_speech_file, s3_speech_path
 from s3 import s3
 from voice import voice
 from configs import configs
 from jarvis.core.message import Message
 import db as db
-
-
-def render_temp(file, **kwargs):
-	env = Environment(loader = FileSystemLoader('templates'))
-	template = env.get_template(file)
-	return template.render(**kwargs)
 
 
 def get_actions():
