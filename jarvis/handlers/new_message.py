@@ -24,18 +24,17 @@ def perform(e):
 	predictor.load_model()
 	
 	# Predict an action to perform based on the user's input.
-	action, confident = predictor.predict(user_input)
+	action, confident_enough = predictor.predict(user_input)
 	
 	# Save user message in persistent mongodb
 	db.save_message({'text': message.text, 'isAudio': False}, is_command=True)
 	
 	logger.info("User Input: {};\nPredicted Action: {}".format(user_input, action))
 	
-	# if confident:
-		# Log the user input and which action was predicted.
-	run_action(action, message)
-	# else:
-	# 	correct_jarvis(message, 'confidence:low')
+	if confident_enough:
+		run_action(action, message)
+	else:
+		correct_jarvis(message, 'confidence:low')
 		
 	# Cache command message in redis
 	db.update_msg_cache(message.text, action)

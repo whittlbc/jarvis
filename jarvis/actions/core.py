@@ -18,12 +18,12 @@ def resp_new_memory(memory, verb_phrase, attr_value):
 	memory = helpers.perspective_swap(memory)
 	attr_value = helpers.perspective_swap(attr_value)
 		
-	respond('Got it! Remembering that {} {} {}.'.format(memory, verb_phrase, attr_value), with_audio=True)
+	respond('Got it! Remembering that {} {} {}.'.format(memory, verb_phrase, attr_value))
 
 
 def remember(memory):
 	memory = helpers.perspective_swap(memory)
-	respond(memory, with_audio=True)
+	respond(memory)
 	
 	
 def forget(memory):

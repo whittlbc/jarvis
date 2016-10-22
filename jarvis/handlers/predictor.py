@@ -24,4 +24,4 @@ class Predictor:
 		
 		print "Confidence: {}".format(confidence)
 	
-		return (self.actions[target_index], confidence > 0.5)
+		return self.actions[target_index], confidence > 0.4

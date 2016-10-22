@@ -1,14 +1,8 @@
 from flask.ext.socketio import emit
-from jarvis.helpers.helpers import tts
 import jarvis.helpers.db as db
 
 
-def respond(text, with_audio=True, data=None, correct_me=False):
-	# Upload the text as audio if specified
-	# if with_audio:
-		# tts(text)
-	
-	# Data to be sent back to client
+def respond(text, with_audio=False, data=None, correct_me=False):
 	message = {
 		'text': text,
 		'isAudio': with_audio,
