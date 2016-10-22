@@ -31,11 +31,11 @@ def perform(e):
 	
 	logger.info("User Input: {};\nPredicted Action: {}".format(user_input, action))
 	
-	if confident:
+	# if confident:
 		# Log the user input and which action was predicted.
-		run_action(action, message)
-	else:
-		correct_jarvis(message, 'confidence:low')
+	run_action(action, message)
+	# else:
+	# 	correct_jarvis(message, 'confidence:low')
 		
 	# Cache command message in redis
 	db.update_msg_cache(message.text, action)
@@ -138,10 +138,10 @@ def get_attr_type(m, memory, verb_phrase):
 
 
 def forget_memory(m):
-	m = re.search('forget (.*)', m.text, re.I)
-	if not m: return False
+	matches = re.search('forget (.*)', m.text, re.I)
+	if not matches: return False
 	
-	x = m.group(1).strip()
+	x = matches.group(1).strip()
 	if x.endswith('.'): x = x[:-1]
 	
 	if not x or not db.forget_memory(x.lower()): return False

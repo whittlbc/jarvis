@@ -16,9 +16,8 @@ def greeting():
 
 def whatup():
 	return [
-		'Not much dude.',
-		'Not much man!',
-		"Just chillin' man"
+		'Not much.',
+		"Just chillin'. How bout you?"
 	]
 	
 
