@@ -190,3 +190,6 @@ jarvis what's your last name|user:name
 siri what's your name|user:name
 siri what's my name|user:name
 eliza what's your name|user:name
+who am i/|user:name
+who am i|user:name
+who are you|user:name
