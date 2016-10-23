@@ -112,12 +112,12 @@
       recognition.onresult = function (e) {
         for (var i = e.resultIndex; i < e.results.length; i++) {
           transcript = e.results[i][0].transcript;
-
           console.log(transcript);
+
           if (isPrompt(transcript) && !gatheringQuery) {
             attentionSound.play();
             gatheringQuery = true;
-            promptStillOpen = true;
+            promptStillOpen = !e.results[i].isFinal;
             break;
           }
 
@@ -132,6 +132,12 @@
             }
           }
         }
+      };
+
+      recognition.onend = function() {
+        setTimeout(function () {
+          recognition.start();
+        }, 1000);
       };
 
       recognition.start();
