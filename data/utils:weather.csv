@@ -158,3 +158,8 @@ yo jarvis what's the weather|utils:weather
 hey jarvis how's the weather|utils:weather
 siri how's the weather|utils:weather
 eliza eliza|utils:weather
+who is the man|utils:weather
+weather me|utils:weather
+ Omar|utils:weather
+ how's the weather|utils:weather
+ what's the weather|utils:weather

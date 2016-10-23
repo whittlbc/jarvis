@@ -2,7 +2,7 @@ from flask.ext.socketio import emit
 import jarvis.helpers.db as db
 
 
-def respond(text, with_audio=False, data=None, correct_me=False):
+def respond(text, with_audio=True, data=None, correct_me=False):
 	message = {
 		'text': text,
 		'isAudio': with_audio,
