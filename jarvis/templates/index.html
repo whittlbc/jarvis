@@ -5,6 +5,7 @@
   <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
   <script text="javascript" src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.6.0/annyang.min.js"></script>
 </head>
 <body>
 <h2>Send:</h2>
@@ -16,10 +17,16 @@
 <div id="log"></div>
   <script type="text/javascript">
     var socket;
+    var isResponding = false;
+
     var speech = new SpeechSynthesisUtterance();
     speech.volume = 1;
     speech.rate = 0.79;
     speech.pitch = 1.3;
+
+    speech.onend = function () {
+      isResponding = false;
+    };
 
     var voices = {};
 
@@ -59,8 +66,14 @@
           // if a soundbite needs to be played, play that.
           if ((message.data || {}).soundbite) {
             var audio = new Audio(message.data.soundbite);
+
+            audio.onended = function () {
+              isResponding = false;
+            };
+
             audio.load();
             audio.play();
+
           }
           // otherwise, just voice the response.
           else {
@@ -68,26 +81,24 @@
             speech.text = text;
             window.speechSynthesis.speak(speech);
           }
+        } else {
+          isResponding = false;
         }
       });
 
       $('#emit').submit(function () {
         var $input = $('#emit_data');
-        emit('message:new', { text: $input.val() });
+        sendMessage($input.val());
         $input.val('').focus();
         return false;
       });
 
-      var recognition = new webkitSpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      function sendMessage (text) {
+        isResponding = true;
+        emit('message:new', { text: text });
+      }
 
-      var transcript;
-      var gatheringQuery = false;
-      var promptStillOpen = false;
-
-      var profanity = ['fuck', 'fucking', 'shit', 'bitch', 'asshole'];
+      var profanity = ['fuck', 'fucking', 'shit', 'bitch', 'asshole', 'nigga'];
       var profanityMap = {};
 
       var escapedProfanity = _.map(profanity, function (word) {
@@ -99,48 +110,52 @@
 
       var profaneRegex = new RegExp(escapedProfanity.join('|'), 'gi');
 
-      function addProfanity (text) {
+      function checkForProfanity (text) {
         return text.replace(profaneRegex, function(match){
           return profanityMap[match.toLowerCase()];
         });
       }
-      
+
+      var namesIsh = [
+        'jarvis',
+        'travis',
+        'tervis',
+        'service',
+        'chavez',
+        'garbage',
+        'nervous',
+        'garvis'
+      ];
+
+      var promptRegex = new RegExp('\\b(' + namesIsh.join('|') + ')\\b', 'i');
+
       function isPrompt (text) {
-        return text.match(/\b(eliza|liza|aliza|why lies)\b/i) != null;
+        return text.match(promptRegex) != null;
       }
 
-      recognition.onresult = function (e) {
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-          transcript = e.results[i][0].transcript;
-          console.log(transcript);
+      var gatheringSpeechQuery = false;
 
-          if (isPrompt(transcript) && !gatheringQuery) {
-            attentionSound.play();
-            gatheringQuery = true;
-            promptStillOpen = !e.results[i].isFinal;
-            break;
-          }
-
-          if (gatheringQuery && e.results[i].isFinal) {
-            if (promptStillOpen) {
-              promptStillOpen = false;
-              break;
-            } else {
-              emit('message:new', { text: addProfanity(transcript) });
-              gatheringQuery = false;
-              break;
-            }
-          }
+      annyang.addCallback('result', function (guesses) {
+        if (isResponding) {
+          return;
         }
-      };
 
-      recognition.onend = function() {
-        setTimeout(function () {
-          recognition.start();
-        }, 1000);
-      };
+        console.log(guesses);
 
-      recognition.start();
+        // if gathering result as the query to be sent to server...
+        if (gatheringSpeechQuery) {
+          gatheringSpeechQuery = false;
+          sendMessage(checkForProfanity(guesses[0]));
+        }
+        // if not gathering query, and this result is prompting the bot with it's name...
+        else if (isPrompt(guesses.join(' '))) {
+          gatheringSpeechQuery = true;
+          attentionSound.play();
+        }
+      });
+
+      annyang.start({ autoRestart: true, continuous: false });
+
     });
 
   </script>

@@ -9,6 +9,8 @@ def yeezy(m):
 			'soundbite': 'http://confluxapp.s3-website-us-west-1.amazonaws.com/files/ytm.m4a'
 		}
 	)
+	NameError
+	
 	
 
 def airhorn_resp(m):
