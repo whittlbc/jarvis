@@ -12,7 +12,7 @@ class Predictor:
 		
 	def load_model(self):
 		self.predictor = self.predictor or joblib.load(model_path, 'r')
-	
+		
 	def predict(self, input):
 		# Clean the user's inputted text (comes back as an array: ex: ['what the weather'])
 		cleaned_input = DataCleaner().clean([[input]])
@@ -22,6 +22,6 @@ class Predictor:
 		
 		confidence = max(self.predictor.decision_function(cleaned_input)[0])
 		
-		print "Confidence: {}".format(confidence)
+		print "Confidence: {}%".format(round(confidence * 100, 2))
 	
-		return self.actions[target_index], confidence > 0.4
+		return self.actions[target_index], confidence > 0.25
