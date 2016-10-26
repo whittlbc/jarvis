@@ -22,6 +22,6 @@ class Predictor:
 		
 		confidence = max(self.predictor.decision_function(cleaned_input)[0])
 		
-		print "Confidence: {}%".format(round(confidence * 100, 2))
+		print "Confidence: {}".format(confidence)
 	
 		return self.actions[target_index], confidence > 0.25

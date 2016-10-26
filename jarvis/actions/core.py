@@ -43,3 +43,7 @@ def list_memories(mem_map):
 			mem_str += "{}: {}\n".format(k, mem_map[k])
 			
 		respond(mem_str.strip())
+		
+		
+def trained_chat_resp(text):
+	respond(text)

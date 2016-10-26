@@ -34,11 +34,12 @@ def perform(e):
 	if confident_enough:
 		run_action(action, message)
 	else:
-		correct_jarvis(message, 'confidence:low')
-		
+		action = ''
+		chat_response(message)
+
 	# Cache command message in redis
 	db.update_msg_cache(message.text, action)
-		
+
 
 def matches_text_pattern(m):
 	potential_matches = [
@@ -223,6 +224,10 @@ def selecting_action_from_list(m):
 		# Save user message
 		db.save_message({'text': m.text, 'isAudio': False})
 		
+		# Update the last_command message (that is currently being corrected) in Redis
+		# to have the proper action.
+		db.update_last_command_action(action)
+		
 		# Perform the correct action on the previous command.
 		run_action(action, message)
 		return True
@@ -240,3 +245,9 @@ def run_action(action, m):
 def correct_jarvis(m, reason):
 	logger.info('Correcting Jarvis for reason: {}'.format(reason))
 	errors.list_actions(m, reason)
+
+
+def chat_response(m):
+	# use trained LSTM model to predict what Jarvis should say
+	response = 'Predicted response'
+	core.trained_chat_resp(response)

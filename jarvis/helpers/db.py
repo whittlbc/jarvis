@@ -93,8 +93,7 @@ def save_message(message, from_jarvis=False, correct_me=False, is_command=False)
 	
 
 # Get the message cached in redis and write it's data to the correct csv
-# as another data point. Add this new message to the cache as a replacement
-# (only 1 at a time). Then retrain the model.
+# as another data point. Add this new message to the cache as a replacement.
 def update_msg_cache(text, action):
 	lc_key = 'last_command'
 	
@@ -108,10 +107,27 @@ def update_msg_cache(text, action):
 		try:
 			lc = json.loads(lc)
 			
-			import jarvis.learn.train as trainer
-			trainer.update_train_data(lc['text'], lc['action'])
+			if lc['action']:
+				import jarvis.learn.train as trainer
+				trainer.update_train_data(lc['text'], lc['action'])
 		except:
 			print 'Error parsing message json from cache'
+	else:
+		print 'Update Message Cache Error: {} key not in redis'.format(lc_key)
+
+
+def update_last_command_action(action):
+	lc_key = 'last_command'
+	
+	# Get the last command info from redis
+	lc = cache.get(lc_key)
+	
+	if lc:
+		# parse it into object
+		lc = json.loads(lc)
+		
+		# Update it with the proper action
+		cache.set(lc_key, json.dumps({'text': lc['text'], 'action': action}))
 
 
 def update_memory_attrs(mem_key, new_attrs):
