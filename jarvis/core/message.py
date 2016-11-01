@@ -1,12 +1,18 @@
-import nltk
-from nltk import pos_tag, word_tokenize, ne_chunk
+from nltk import pos_tag, word_tokenize
 from nltk.data import load
 tagdict = load('help/tagsets/upenn_tagset.pickle')
 from nltk.internals import find_jars_within_path
 from nltk.parse.stanford import StanfordParser
+from nltk.corpus import names
+
 parser = StanfordParser(model_path="edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
 stanford_dir = parser._classpath[0].rpartition('/')[0]
 parser._classpath = tuple(find_jars_within_path(stanford_dir))
+
+names_map = dict(
+	[(name.lower(), 'male') for name in names.words('male.txt')] +
+	[(name.lower(), 'female') for name in names.words('female.txt')]
+)
 
 
 class Message:
@@ -96,14 +102,5 @@ class Message:
 		return tree
 	
 	def is_person(self, subject):
-		if subject not in self.text: return False
-		
-		proper_subject = subject.title()
-		text = self.text.replace(subject, proper_subject)
-		chunked_nes = ne_chunk(self.tag_text(text))
-		
-		for ne in chunked_nes:
-			if isinstance(ne, nltk.tree.Tree) and ne.leaves()[0][0] == proper_subject:
-				return ne.label() == 'PERSON'
-			
-		return False
+		if subject not in self.clean_text: return False
+		return bool(names_map.get(subject))

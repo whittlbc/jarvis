@@ -133,7 +133,7 @@ def get_attr_type(m, memory, verb_phrase):
 	attr_type = when_where_map.get(verb_phrase)
 	
 	if attr_type: return attr_type  # when or where
-	if m.is_person(memory): return 'who'
+	if m.is_person(memory.lower()): return 'who'
 	return 'what'
 
 
