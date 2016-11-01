@@ -1,6 +1,6 @@
 import logging
 from flask import Flask
-from jarvis.helpers.predictor import Predictor
+from jarvis.core.predictor import Predictor
 
 # Init app
 app = Flask(__name__)
