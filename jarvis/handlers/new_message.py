@@ -35,7 +35,7 @@ def perform(e):
 	# Otherwise, default to our conversational model to respond
 	else:
 		action = ''  # we don't want to update the message cache with an incorrect action...
-		chat_response(message)
+		converse(message)
 
 	# Cache command message in redis
 	db.update_msg_cache(message.text, action)
@@ -88,12 +88,16 @@ def fetch_memory(m):
 	
 
 def new_memory(m):
-	matches = re.search(
-		'(remember that|remember) (.*) (as|is on|is in|is at|is|was on|was in|was at|was|will be on|will be in|will be at|will be) (.*)',
-		m.text,
-		re.I
-	)
+	pos = ['is', 'was', 'will be']
+	preps = ['on', 'in', 'at']
+	patterns = ['as']
 	
+	for p in pos:
+		patterns += ([p + ' {}'.format(prep) for prep in preps] + [p])
+		
+	patterns = '|'.join(patterns)
+	
+	matches = re.search('(remember that|remember) (.*) ({}) (.*)'.format(patterns), m.text, re.I)
 	if not matches: return False
 	
 	memory = matches.group(2).strip()
@@ -118,23 +122,16 @@ def new_memory(m):
 	
 
 def get_attr_type(m, memory, verb_phrase):
-	when_where_map = {
-		'is on': 'when',
-		'was on': 'when',
-		'will be on': 'when',
-		'is at': 'where',
-		'was at': 'where',
-		'will be at': 'where',
-		'is in': 'where',
-		'was in': 'where',
-		'will be in': 'where'
-	}
-	
-	attr_type = when_where_map.get(verb_phrase)
-	
-	if attr_type: return attr_type  # when or where
-	if m.is_person(memory.lower()): return 'who'
-	return 'what'
+	if verb_phrase[-3:] == ' on':
+		attr_type = 'when'
+	elif verb_phrase[-3:] == ' in':
+		attr_type = 'where'
+	elif m.is_person(memory.lower()):
+		attr_type = 'who'
+	else:
+		attr_type = 'what'
+		
+	return attr_type
 
 
 def forget_memory(m):
@@ -247,7 +244,7 @@ def correct_jarvis(m, reason):
 	errors.list_actions(m, reason)
 
 
-def chat_response(m):
+def converse(m):
 	# use trained LSTM model to predict what Jarvis should say
 	response = 'Predicted response'
 	core.trained_chat_resp(response, m.is_audio)

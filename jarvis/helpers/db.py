@@ -108,7 +108,7 @@ def update_msg_cache(text, action):
 			lc = json.loads(lc)
 			
 			if lc['action']:
-				import jarvis.learn.train as trainer
+				import jarvis.learn.classify.train as trainer
 				trainer.update_train_data(lc['text'], lc['action'])
 		except:
 			print 'Error parsing message json from cache'

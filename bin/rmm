@@ -1,4 +1,0 @@
-#!/usr/bin/env ruby
-
-model = "#{File.expand_path("..", Dir.pwd)}/jarvis/jarvis/learn/model.pkl"
-File.delete(model) if File.exists?(model)
