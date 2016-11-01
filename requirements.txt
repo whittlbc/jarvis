@@ -2,6 +2,7 @@ alembic==0.8.8
 autoenv==1.0.0
 boto3==1.4.1
 botocore==1.4.62
+configparser==3.5.0
 docutils==0.12
 Flask==0.10.1
 Flask-Migrate==1.8.0
@@ -9,6 +10,7 @@ Flask-Script==2.0.5
 Flask-SocketIO==2.7.1
 Flask-Sockets==0.2.1
 Flask-SQLAlchemy==2.1
+funcsigs==1.0.2
 futures==3.0.5
 gevent==1.1.2
 gevent-websocket==0.9.5
@@ -19,9 +21,12 @@ Jinja2==2.8
 jmespath==0.9.0
 Mako==1.0.4
 MarkupSafe==0.23
+mock==2.0.0
 nltk==3.2.1
 numpy==1.11.2
 pandas==0.19.0
+pbr==1.10.0
+protobuf==3.0.0
 psycopg2==2.6.1
 pygame==1.9.2b6
 pymongo==3.3.0
@@ -39,4 +44,6 @@ scipy==0.18.1
 six==1.10.0
 SQLAlchemy==1.0.15
 suds==0.4
+tensorflow==0.11.0rc2
+tqdm==4.9.0
 Werkzeug==0.11.11
