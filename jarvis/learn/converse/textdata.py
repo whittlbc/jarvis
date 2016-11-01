@@ -7,6 +7,11 @@ import os  # Checking file existance
 import random
 from cornelldata import CornellData
 
+# Monkey patch math.isclose for Python <3.5
+if not hasattr(math, 'isclose'):
+	math.isclose = lambda a, b, rel_tol=1e-09, abs_tol=0.0: \
+		abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
 
 class Batch:
     """Struct containing batches info
