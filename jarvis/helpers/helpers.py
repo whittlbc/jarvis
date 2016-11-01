@@ -58,7 +58,7 @@ def last_command_msg():
 	
 	if msg.count() == 0: return None
 	
-	return Message(msg[0]['text'])
+	return Message(msg[0])
 
 
 def perspective_swap(text):

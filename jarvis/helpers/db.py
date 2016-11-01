@@ -112,8 +112,6 @@ def update_msg_cache(text, action):
 				trainer.update_train_data(lc['text'], lc['action'])
 		except:
 			print 'Error parsing message json from cache'
-	else:
-		print 'Update Message Cache Error: {} key not in redis'.format(lc_key)
 
 
 def update_last_command_action(action):
