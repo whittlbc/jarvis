@@ -1,5 +1,5 @@
 from sklearn.externals import joblib
-from definitions import model_path
+from definitions import classifier_model_path
 from jarvis.learn.utils.data_cleaner import DataCleaner
 import jarvis.helpers.helpers as helpers
 
@@ -11,7 +11,7 @@ class Predictor:
 		self.actions = helpers.get_actions()
 		
 	def load_model(self):
-		self.predictor = self.predictor or joblib.load(model_path, 'r')
+		self.predictor = self.predictor or joblib.load(classifier_model_path, 'r')
 		
 	def predict(self, input):
 		# Clean the user's inputted text (comes back as an array: ex: ['what the weather'])

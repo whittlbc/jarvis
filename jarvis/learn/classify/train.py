@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from definitions import model_path, data_path
+from definitions import classifier_model_path, actions_data_path
 import jarvis.learn.utils.data_prepper as dp
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -46,19 +46,19 @@ def gs_clf_params():
 
 
 def save_model(model):
-	joblib.dump(model.best_estimator_, model_path)
+	joblib.dump(model.best_estimator_, classifier_model_path)
 	
 	
 def get_saved_model():
-	if os.path.isfile(model_path):
-		return joblib.load(model_path, 'r')
+	if os.path.isfile(classifier_model_path):
+		return joblib.load(classifier_model_path, 'r')
 	else:
 		raise 'Error: Can\'t fetch saved model that isn\'t there yet.'
 
 
 def update_train_data(text, target):
 	# Find file for csv based on target
-	path = '{}/{}.csv'.format(data_path, target)
+	path = '{}/{}.csv'.format(actions_data_path, target)
 	
 	# Return if file's not already there
 	if not os.path.isfile(path): return

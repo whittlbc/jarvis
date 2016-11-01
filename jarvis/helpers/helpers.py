@@ -1,6 +1,6 @@
 import pandas
 import glob
-from definitions import data_path, default_speech_file, s3_speech_path
+from definitions import actions_data_path, default_speech_file, s3_speech_path
 from s3 import s3
 from voice import voice
 from configs import configs
@@ -20,7 +20,7 @@ def get_actions():
 	
 
 def csvs():
-	return glob.glob(data_path + "/*.csv")
+	return glob.glob(actions_data_path + "/*.csv")
 
 
 def read_csv(f, sep='|'):
