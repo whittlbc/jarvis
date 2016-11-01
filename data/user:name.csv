@@ -194,3 +194,9 @@ who am i/|user:name
 who am i|user:name
 who are you|user:name
 who are you|user:name
+What should I call you?|user:name
+who are you?|user:name
+what's your  name?|user:name
+what's your first name?|user:name
+last name?|user:name
+your last name?|user:name
