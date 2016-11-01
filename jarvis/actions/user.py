@@ -57,4 +57,4 @@ def name(m):
 			
 		resp = "{} {}.".format(prefix, resp)
 	
-	respond(resp)
+	respond(resp, with_audio=m.is_audio)

@@ -8,10 +8,7 @@ import re
 
 
 def perform(e):
-	user_input = e['text']
-	
-	# Create an Event class with our known event data
-	message = Message(e['text'])
+	message = Message(e)
 	
 	# Do nothing if empty text
 	if not message.text.strip(): return
@@ -24,17 +21,20 @@ def perform(e):
 	predictor.load_model()
 	
 	# Predict an action to perform based on the user's input.
-	action, confident_enough = predictor.predict(user_input)
+	action, confident_enough = predictor.predict(message.text)
 	
 	# Save user message in persistent mongodb
 	db.save_message({'text': message.text, 'isAudio': False}, is_command=True)
 	
-	logger.info("User Input: {};\nPredicted Action: {}".format(user_input, action))
+	logger.info("User Input: {};\nPredicted Action: {}".format(message.text, action))
 	
+	# Only perform the predicted action if the model was confident enough
 	if confident_enough:
 		run_action(action, message)
+		
+	# Otherwise, default to our conversational model to respond
 	else:
-		action = ''
+		action = ''  # we don't want to update the message cache with an incorrect action...
 		chat_response(message)
 
 	# Cache command message in redis
@@ -60,19 +60,19 @@ def matches_text_pattern(m):
 
 
 def fetch_memory(m):
-	matches = re.search('(what is|what\'s|who is|who\'s|where is|where\'s|when is|when\'s) (.*)', m.text, re.I)
+	wh = ['who', 'what', 'when', 'where']
+	patterns = []
+	
+	for w in wh:
+		patterns += ['{} is'.format(w), '{}\'s'.format(w)]
+		
+	patterns = '({}) (.*)'.format('|'.join(patterns))
+	
+	matches = re.search(patterns, m.text, re.I)
 	if not matches: return False
 	
 	wh = matches.group(1).lower()
-	
-	if wh == 'who is' or wh == 'who\'s':
-		attr_type = 'who'
-	elif wh == 'what is' or wh == 'what\'s':
-		attr_type = 'what'
-	elif wh == 'when is' or wh == 'when\'s':
-		attr_type = 'when'
-	elif wh == 'where is' or wh == 'where\'s':
-		attr_type = 'where'
+	attr_type = re.sub(r'( is|\'s)', '', wh)
 	
 	mem_key = matches.group(2).strip().lower()
 	
@@ -82,7 +82,7 @@ def fetch_memory(m):
 	memory = db.get_memory(mem_key.lower(), attr_type)
 	
 	if not memory: return False
-	core.remember(memory)
+	core.remember(memory, m.is_audio)
 	
 	return True
 	
@@ -109,7 +109,7 @@ def new_memory(m):
 		attr_value = attr_value[:-1]
 	
 	# Respond
-	core.resp_new_memory(memory, verb_phrase, attr_value)
+	core.resp_new_memory(memory, verb_phrase, attr_value, m.is_audio)
 	
 	# Add memory to DB
 	db.update_memory(memory, attr_type, attr_value)
@@ -146,14 +146,14 @@ def forget_memory(m):
 	
 	if not x or not db.forget_memory(x.lower()): return False
 	
-	core.forget(x)
+	core.forget(x, m.is_audio)
 	
 	return True
 	
 
 def list_memories(m):
 	if m.clean_text != 'memories': return False
-	core.list_memories(db.get_memories())
+	core.list_memories(db.get_memories(), m.is_audio)
 	return True
 
 
@@ -250,4 +250,4 @@ def correct_jarvis(m, reason):
 def chat_response(m):
 	# use trained LSTM model to predict what Jarvis should say
 	response = 'Predicted response'
-	core.trained_chat_resp(response)
+	core.trained_chat_resp(response, m.is_audio)

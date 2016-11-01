@@ -15,13 +15,14 @@ class Message:
 	sp_prons = ['you']
 	sp_poss_prons = ['your', 'thy']
 	
-	def __init__(self, text):
-		self.text = text
-		self.clean_text = text.lower().strip()
+	def __init__(self, event):
+		self.text = event['text']
+		self.is_audio = event['isAudio']
+		self.clean_text = self.text.lower().strip()
 		self.tree = None
 		
 		if self.clean_text:
-			self.tagged_text = self.tag_text(text)
+			self.tagged_text = self.tag_text(self.text)
 			self.pos_map, self.pos_map_lc = self.create_pos_map()
 		
 	def tag_text(self, text):
