@@ -35,8 +35,8 @@ class TextData:
 		self.args = args
 		
 		# Path variables
-		self.corpus_dir = os.path.join(self.args.rootDir, 'data/converse/cornell/')
-		self.samples_dir = os.path.join(self.args.rootDir, 'data/converse/samples/')
+		self.corpus_dir = os.path.join(self.args.root_dir, 'data/converse/cornell/')
+		self.samples_dir = os.path.join(self.args.root_dir, 'data/converse/samples/')
 		self.samples_name = self._construct_name()
 		
 		self.pad_token = -1  # Padding
