@@ -76,5 +76,5 @@ class CornellData:
 		
 		return conversations
 	
-	def getConversations(self):
+	def get_conversations(self):
 		return self.conversations
