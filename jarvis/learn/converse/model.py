@@ -184,7 +184,7 @@ class Model:
 	
 	def step(self, batch):
 		""" Forward/training step operation.
-		Does not perform run on itself but just return the operators to do so. Those have then to be run
+		Does not perform run on itself but just return the operators to do so. Those have then to be run.
 		Args:
 				batch (Batch): Input data on testing mode, input and target on output mode
 		Return:
