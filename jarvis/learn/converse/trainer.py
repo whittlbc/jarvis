@@ -6,7 +6,7 @@ import tensorflow as tf
 from text_data import TextData
 from model import Model
 from test_mode import TestMode
-from args import parse_args
+from args import Args
 
 
 class Trainer:
@@ -35,7 +35,7 @@ class Trainer:
 		
 	# General initialization
 	def main(self, args=None):
-		self.args = parse_args(args)
+		self.args = Args(args).parse_args()
 		
 		# Update self.model_dir and self.global_step...not used when loading our model,
 		# but needs to be called before _get_summary_name)

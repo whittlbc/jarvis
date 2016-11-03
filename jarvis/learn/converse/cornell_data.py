@@ -2,79 +2,50 @@ from io import open
 
 
 class CornellData:
+	RESOURCE_INFO = {
+		'lines': ['movie_lines.txt', ['lineID', 'characterID', 'movieID', 'character', 'text']],
+		'conversations': ['movie_conversations.txt', ['character1ID', 'character2ID', 'movieID', 'utteranceIDs']]
+	}
+	
 	def __init__(self, dir_name):
-		"""
-		Args:
-				dir_name (string): directory where to load the corpus
-		"""
-		self.lines = {}
-		self.conversations = []
-		
-		MOVIE_LINES_FIELDS = ["lineID", "characterID", "movieID", "character", "text"]
-		MOVIE_CONVERSATIONS_FIELDS = ["character1ID", "character2ID", "movieID", "utteranceIDs"]
-		
-		self.lines = self.load_lines(dir_name + "movie_lines.txt", MOVIE_LINES_FIELDS)
-		self.conversations = self.load_conversations(dir_name + "movie_conversations.txt", MOVIE_CONVERSATIONS_FIELDS)
-		
-		# TODO: Cleaner program (merge copy-paste) !!
+		self.dir_name = dir_name
+		self.lines = self.load_resource(lines=True)
+		self.conversations = self.load_resource(conversations=True)
 	
-	def load_lines(self, file_name, fields):
-		"""
-		Args:
-				file_name (str): file to load
-				field (set<str>): fields to extract
-		Return:
-				dict<dict<str>>: the extracted fields for each line
-		"""
-		lines = {}
+	def load_resource(self, lines=False, conversations=False):
+		if lines == conversations:
+			print 'Cannot load resource: Both lines and conversations cannot be set to {}.'.format(lines)
+			return
 		
-		with open(file_name, 'r', encoding='iso-8859-1') as f:  # TODO: Solve Iso encoding pb !
+		if lines:
+			resource_info = self.RESOURCE_INFO['lines']
+			resources = {}
+		else:
+			resource_info = self.RESOURCE_INFO['conversations']
+			resources = []
+		
+		file_name, fields = resource_info
+		
+		with open(self.dir_name + file_name, 'r', encoding='iso-8859-1') as f:
 			for line in f:
-				values = line.split(" +++$+++ ")
+				values = line.split(' +++$+++ ')
+				resource = {}
 				
-				# Extract fields
-				line_obj = {}
 				for i, field in enumerate(fields):
-					line_obj[field] = values[i]
+					resource[field] = values[i]
 				
-				lines[line_obj['lineID']] = line_obj
+				if lines:
+					resources[resource['lineID']] = resource
+				else:
+					line_ids = resource['utteranceIDs'][2:-3].split("', '")
+					resource['lines'] = []
+					
+					for line_id in line_ids:
+						resource['lines'].append(self.lines[line_id])
+					
+					resources.append(resource)
 		
-		return lines
-	
-	def load_conversations(self, file_name, fields):
-		"""
-		Args:
-				file_name (str): file to load
-				field (set<str>): fields to extract
-		Return:
-				dict<dict<str>>: the extracted fields for each line
-		"""
-		conversations = []
-		
-		with open(file_name, 'r', encoding='iso-8859-1') as f:  # TODO: Solve Iso encoding pb !
-			for line in f:
-				values = line.split(" +++$+++ ")
-				
-				# Extract fields
-				conv_obj = {}
-				for i, field in enumerate(fields):
-					conv_obj[field] = values[i]
-				
-				line_ids = conv_obj["utteranceIDs"][2:-3].split("', '")
-				
-				# print(conv_obj["utteranceIDs"])
-				# for line_id in line_ids:
-				# print(line_id, end=' ')
-				# print()
-				
-				# Reassemble lines
-				conv_obj["lines"] = []
-				for line_id in line_ids:
-					conv_obj["lines"].append(self.lines[line_id])
-				
-				conversations.append(conv_obj)
-		
-		return conversations
+		return resources
 	
 	def get_conversations(self):
 		return self.conversations

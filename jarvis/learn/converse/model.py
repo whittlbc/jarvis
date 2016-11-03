@@ -1,5 +1,5 @@
 import tensorflow as tf
-from text_data import Batch
+from batch import Batch
 
 
 class ProjectionOp:
