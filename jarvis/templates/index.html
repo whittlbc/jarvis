@@ -42,18 +42,13 @@
       attentionSound = new Audio('http://confluxapp.s3-website-us-west-1.amazonaws.com/jarvis/attention.wav');
       attentionSound.load();
 
-      var namespace = '/master';
-      socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+      socket = io.connect('http://' + document.domain + ':' + location.port + '/master');
 
       var emit = function (type, data) {
         data = data || {};
         data.type = type;
         socket.emit('event', data);
       };
-
-      socket.on('connect', function () {
-        emit('user:connect');
-      });
 
       socket.on('response', function (message) {
         var text = message.text;

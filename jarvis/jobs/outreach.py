@@ -2,6 +2,7 @@ from jarvis.jobs import schedule_job  # need this to reschedule our job
 import datetime
 from random import randint
 from jarvis.core.responder import respond
+from jarvis.helpers.cache import cache
 
 
 def options():
@@ -17,7 +18,6 @@ def random_runtime():
 	
 	# Get random time delta for next outreach
 	run_time = now + datetime.timedelta(hours=random_hour(), minutes=random_minute())
-	# run_time = now + datetime.timedelta(hours=0, minutes=1)
 
 	# Check to make sure this new outreach time won't interfere with sleep time
 	if during_sleep_time(run_time):
@@ -89,17 +89,18 @@ def push_until_morning(run_time):
 	return run_time + datetime.timedelta(hours=hours_until_morning)
 
 
-def reach_out():
-	# TODO: once you have some APIs built out, make a random fetch to one of the APIs that can provide
-	# "outreach" content. Examples of outreach content includes:
-	# 		- News articles/blog links
-	# 		- Photos
-	# 		- Gifs
-	# 		- Videos
-	# 		- Fun facts (ala TIL on Reddit or something like that)
-	respond('Hey! Hope you\'re having a good day!')
-
-
-def perform():
-	reach_out()
-	schedule_job(perform, options())
+# TODO: once you have some APIs built out, make a random fetch to a content API for either of the following:
+#   - News articles/blog links
+# 	- Photos
+# 	- Gifs
+# 	- Videos
+# 	- Fun facts (ala TIL on Reddit or something like that)
+def perform(app):
+	with app.test_request_context():
+		# Get current user's socket session id from Redis
+		sid = cache.get('user_sid')
+		
+		if sid:
+			respond('Hey! Hope you\'re having a great day!', room=sid)
+		
+	schedule_job(app, perform, options())
