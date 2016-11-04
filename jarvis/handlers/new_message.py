@@ -64,7 +64,10 @@ def fetch_memory(m):
 	patterns = []
 	
 	for w in wh:
-		patterns += ['{} is'.format(w), '{}\'s'.format(w)]
+		patterns += ['{} is'.format(w), '{}\'s'.format(w), '{} are'.format(w)]
+		
+		if w in ['who', 'what']:
+			patterns.append('{}\'re'.format(w))
 		
 	patterns = '({}) (.*)'.format('|'.join(patterns))
 	
@@ -88,14 +91,14 @@ def fetch_memory(m):
 	
 
 def new_memory(m):
-	pos = ['is', 'was', 'will be']
+	pos = ['is', 'are', 'was', 'will be']
 	preps = ['on', 'in', 'at']
-	patterns = ['as']
+	patterns = []
 	
 	for p in pos:
 		patterns += ([p + ' {}'.format(prep) for prep in preps] + [p])
 		
-	patterns = '|'.join(patterns)
+	patterns = '|'.join(['as'] + patterns)
 	
 	matches = re.search('(remember that|remember) (.*) ({}) (.*)'.format(patterns), m.text, re.I)
 	if not matches: return False
