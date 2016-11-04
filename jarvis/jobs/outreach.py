@@ -1,6 +1,7 @@
 from jarvis.jobs import schedule_job  # need this to reschedule our job
 import datetime
 from random import randint
+from jarvis.core.responder import respond
 
 
 def options():
@@ -89,7 +90,14 @@ def push_until_morning(run_time):
 
 
 def reach_out():
-	print 'Hey it\'s Jarvis!'
+	# TODO: once you have some APIs built out, make a random fetch to one of the APIs that can provide
+	# "outreach" content. Examples of outreach content includes:
+	# 		- News articles/blog links
+	# 		- Photos
+	# 		- Gifs
+	# 		- Videos
+	# 		- Fun facts (ala TIL on Reddit or something like that)
+	respond('Hey! Hope you\'re having a good day!')
 
 
 def perform():
