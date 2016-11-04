@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from definitions import classifier_model_path, actions_data_path
+from definitions import classifier_model_path, classify_data_path
 import jarvis.learn.utils.data_prepper as dp
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -58,7 +58,7 @@ def get_saved_model():
 
 def update_train_data(text, target):
 	# Find file for csv based on target
-	path = '{}/{}.csv'.format(actions_data_path, target)
+	path = '{}/{}.csv'.format(classify_data_path, target)
 	
 	# Return if file's not already there
 	if not os.path.isfile(path): return

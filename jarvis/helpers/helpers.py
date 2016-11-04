@@ -1,6 +1,6 @@
 import pandas
 import glob
-from definitions import actions_data_path
+from definitions import classify_data_path
 from jarvis.core.message import Message
 import db as db
 
@@ -17,7 +17,7 @@ def get_actions():
 	
 
 def csvs():
-	return glob.glob(actions_data_path + "/*.csv")
+	return glob.glob(classify_data_path + "/*.csv")
 
 
 def read_csv(f, sep='|'):

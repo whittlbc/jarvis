@@ -204,7 +204,7 @@ def selecting_action_from_list(m):
 	actions = helpers.get_actions()
 	
 	# If the number is in the range of the number of actions + the ignore option...
-	if num > 0 and num <= (len(actions) + 1):
+	if 0 < num <= (len(actions) + 1):
 		# Move on if Jarvis wasn't prompting you to correct him with his last message.
 		if not helpers.prev_msg_was_correct_jarvis(): return False
 		
@@ -232,6 +232,7 @@ def selecting_action_from_list(m):
 		return False
 		
 
+# Perform action predicted by trained classifier
 def run_action(action, m):
 	module_name, method_name = action.split(':')
 	module = user = __import__('jarvis.actions.{}'.format(module_name), globals(), locals(), ['object'], -1)
@@ -239,12 +240,12 @@ def run_action(action, m):
 	method(m)
 	
 
+# use trained seq2seq model to predict what Jarvis should say
+def converse(m):
+	response = 'Predicted response'
+	core.trained_chat_resp(response, m.is_audio)
+	
+	
 def correct_jarvis(m, reason):
 	logger.info('Correcting Jarvis for reason: {}'.format(reason))
 	errors.list_actions(m, reason)
-
-
-def converse(m):
-	# use trained LSTM model to predict what Jarvis should say
-	response = 'Predicted response'
-	core.trained_chat_resp(response, m.is_audio)
