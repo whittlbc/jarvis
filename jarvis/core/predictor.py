@@ -1,6 +1,6 @@
 from sklearn.externals import joblib
 from definitions import classifier_model_path
-from jarvis.learn.utils.data_cleaner import DataCleaner
+from jarvis.learn.classify.data_cleaner import DataCleaner
 import jarvis.helpers.helpers as helpers
 
 

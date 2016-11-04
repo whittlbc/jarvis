@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from definitions import classifier_model_path, classify_data_path
-import jarvis.learn.utils.data_prepper as dp
+import data_prepper as dp
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.linear_model import SGDClassifier
