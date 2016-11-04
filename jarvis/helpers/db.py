@@ -198,55 +198,64 @@ def update_memory(mem_key, attr_type, attr_value):
 
 
 def get_memory(subject, wh):
-	memories = cache.get('memories')
-	
-	if memories is None:
-		memories = find_all('memories')
-		mem_map = {}
-		
-		for mem in memories:
-			mem_map[mem['key']['lower']] = {
-				'orig': mem['key']['orig'],
-				'attrs': mem['attrs']
-			}
-		
-		memories = json.dumps(mem_map)
-		cache.set('memories', memories)
-		
-	memories = json.loads(memories)
+	memories = get_memories()
 	split_subject = subject.split(' ')
 	
 	# If dealing with something like "who is (in|at)" or "what is (in|at|on)"...
 	# For now, only 'in' and 'at' correlate to 'where', while 'on' correlates to 'when'.
+	# I realize that 'on' could also be used as a where preposition, but just gonna deal with that later.
 	who_or_what_with_prep = (wh == 'who' and split_subject[0] in ['in', 'at']) or \
 		(wh == 'what' and split_subject[0] in ['in', 'at', 'on'])
 	
 	if who_or_what_with_prep:
 		prep = split_subject[0]
 		subject = ' '.join(split_subject[1:])
-		wh_for_prep = {'in': 'where', 'at': 'where', 'on': 'when'}[prep]
+		
+		wh_for_prep = {
+			'in': 'where',
+			'at': 'where',
+			'on': 'when'
+		}[prep]
 		
 		keys = []
-		
 		for k, v in memories.iteritems():
 			if v['attrs'][wh_for_prep]['lower'] == subject:
 				keys.append(v['orig'])
 	else:
-		# if not who_or_what_with_prep, try getting record by key: <subject>
+		# At this point, try getting record just by key: <subject>
 		memory = memories.get(subject)
 		
 		# if memory exists for that subject, return the requested attr
-		if memory: return memory['attrs'][wh]['orig']
+		if memory:
+			return memory['attrs'][wh]['orig']
 		
+		# Otherwise, we need to do a "backwards" search -- looking up documents where v['attrs'][X] == subject
 		keys = []
 		for k, v in memories.iteritems():
-			is_result = (wh == 'what' and subject in [v['attrs']['what']['lower'], v['attrs']['who']['lower']]) or \
-									(v['attrs'][wh]['lower'] == subject)
+			attrs = v['attrs']
+			result = None
 			
-			if is_result:
-				keys.append(v['orig'])
+			if wh == 'what':
+				if subject in [attrs['what']['lower'], attrs['who']['lower']]:
+					result = v['orig']
 				
-		if not keys: return None
+			elif wh == 'where':
+				if subject in [attrs['what']['lower'], attrs['who']['lower']]:
+					result = attrs[wh]['orig']
+					
+			elif wh == 'when':
+				if subject == attrs['what']['lower']:
+					result = attrs[wh]['orig']
+				
+			else:
+				if subject == attrs[wh]['lower']:
+					result = v['orig']
+			
+			if result:
+				keys.append(result)
+				
+		if not keys:
+			return None
 	
 	return comma_delimit(keys)
 						

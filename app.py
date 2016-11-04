@@ -21,7 +21,7 @@ def new_event(e):
 	event_handler.handle_event(e)
 	
 
-# Train our NN
+# Train our classifier
 trainer.perform()
 
 
