@@ -214,25 +214,50 @@ def get_memory(subject, wh):
 		cache.set('memories', memories)
 		
 	memories = json.loads(memories)
+	split_subject = subject.split(' ')
 	
-	# First try to find a memory with key, <subject>.
-	memory = memories.get(subject)
+	# If dealing with something like "who is (in|at)" or "what is (in|at|on)"...
+	# For now, only 'in' and 'at' correlate to 'where', while 'on' correlates to 'when'.
+	who_or_what_with_prep = (wh == 'who' and split_subject[0] in ['in', 'at']) or \
+		(wh == 'what' and split_subject[0] in ['in', 'at', 'on'])
 	
-	if memory: return memory['attrs'][wh]['orig']
-	
-	keys = []
-	
-	# import code; code.interact(local=dict(globals(), **locals()))
-	
-	if wh == 'who' or wh == 'what':
+	if who_or_what_with_prep:
+		prep = split_subject[0]
+		subject = ' '.join(split_subject[1:])
+		wh_for_prep = {'in': 'where', 'at': 'where', 'on': 'when'}[prep]
+		
+		keys = []
+		
 		for k, v in memories.iteritems():
-			if v['attrs'][wh]['lower'] == subject:
+			if v['attrs'][wh_for_prep]['lower'] == subject:
 				keys.append(v['orig'])
-
-	if len(keys) > 2:
-		return ', '.join(keys[:-1]) + ', and ' + keys[-1]
 	else:
-		return ' and '.join(keys)
+		# if not who_or_what_with_prep, try getting record by key: <subject>
+		memory = memories.get(subject)
+		
+		# if memory exists for that subject, return the requested attr
+		if memory: return memory['attrs'][wh]['orig']
+		
+		keys = []
+		for k, v in memories.iteritems():
+			is_result = (wh == 'what' and subject in [v['attrs']['what']['lower'], v['attrs']['who']['lower']]) or \
+									(v['attrs'][wh]['lower'] == subject)
+			
+			if is_result:
+				keys.append(v['orig'])
+				
+		if not keys: return None
+	
+	return comma_delimit(keys)
+						
+
+def comma_delimit(keys):
+	if len(keys) > 2:
+		keys = ', '.join(keys[:-1]) + ', and ' + keys[-1]
+	else:
+		keys = ' and '.join(keys)
+	
+	return keys
 
 
 def get_memories():

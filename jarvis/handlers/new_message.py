@@ -82,13 +82,13 @@ def fetch_memory(m):
 	if mem_key[-1] in ('.', '?', '!'):
 		mem_key = mem_key[:-1]
 
-	memory = db.get_memory(mem_key.lower(), attr_type)
+	memory = db.get_memory(mem_key, attr_type)
 	
 	if not memory: return False
 	core.remember(memory, m.is_audio)
 	
 	return True
-	
+
 
 def new_memory(m):
 	pos = ['is', 'are', 'was', 'will be']
