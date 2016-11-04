@@ -6,31 +6,44 @@ class AbstractApi(object):
 	
 	def __init__(self, service_slug):
 		self.service = db.service(service_slug)
+		self.headers = self.service['headers']
 		self.configs = self.service['configs']
 		self.api_url = self.service['apiUrl']
-		self.headers = self.service['headers']
+		
+	def get(self, route, **kwargs):
+		return self._make_request('get', route, **kwargs)
 	
-	def get(self, route, payload = None, add_headers = False, err_message = 'Jarvis - API Error'):
-		headers = self.format_headers(add_headers)
-		response = requests.get(self.url(route), params = payload or {}, headers = headers)
-		return self.handle_response(response, err_message)
+	def post(self, route, **kwargs):
+		return self._make_request('post', route, **kwargs)
 	
-	def post(self, route, payload = None, add_headers = False, err_message = 'Jarvis - API Error'):
-		headers = self.format_headers(add_headers)
-		response = requests.post(self.url(route), data = payload or {}, headers = headers)
-		return self.handle_response(response, err_message)
+	def put(self, route, **kwargs):
+		return self._make_request('put', route, **kwargs)
 	
-	def put(self, route, payload = None, add_headers = False, err_message = 'Jarvis - API Error'):
-		headers = self.format_headers(add_headers)
-		response = requests.put(self.url(route), data = payload or {}, headers = headers)
-		return self.handle_response(response, err_message)
+	def delete(self, route, **kwargs):
+		return self._make_request('delete', route, **kwargs)
 	
-	def delete(self, route, payload = None, add_headers = False, err_message = 'Jarvis - API Error'):
-		headers = self.format_headers(add_headers)
-		response = requests.delete(self.url(route), params = payload or {}, headers = headers)
-		return self.handle_response(response, err_message)
+	def _make_request(self, method, route, payload=None, add_headers=False, err_message='Jarvis - API Error'):
+		# Format and add our headers based on which service this is for
+		headers = self._format_headers(add_headers)
+		
+		# Get the proper method (get, post, put, or delete)
+		request = getattr(requests, method)
 
-	def format_headers(self, add_headers):
+		# Prep the args
+		args = {'headers': headers}
+		
+		if method in ['get', 'delete']:
+			args['params'] = payload or {}
+		else:
+			args['data'] = payload or {}
+			
+		# Make the request
+		response = request(self.api_url + route, **args)
+		
+		# Return the JSON response
+		return self._handle_response(response, err_message)
+
+	def _format_headers(self, add_headers):
 		if add_headers:
 			# format a dict from the current service_user's config/header info that matches
 			# up with this service's headers (self.headers)
@@ -38,10 +51,8 @@ class AbstractApi(object):
 		else:
 			return {}
 	
-	def url(self, route):
-		return self.api_url + route
-	
-	def handle_response(self, response, err_message):
+	@staticmethod
+	def _handle_response(response, err_message):
 		if response.status_code == requests.codes.ok:
 			return response.json()
 		else:

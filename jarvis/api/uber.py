@@ -7,6 +7,3 @@ class Uber(AbstractApi):
 	
 	def __init__(self):
 		AbstractApi.__init__(self, self.slug)
-	
-	def request_ride(self):
-		return ''
