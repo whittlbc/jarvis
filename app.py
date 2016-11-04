@@ -27,5 +27,5 @@ trainer.perform()
 
 # Start our app
 if __name__ == '__main__':
-	socket.run(app, port=3000, debug=configs.DEBUG)
+	socket.run(app, port=3000, debug=configs.DEBUG, use_reloader=False)
 

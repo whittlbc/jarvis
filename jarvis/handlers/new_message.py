@@ -238,7 +238,7 @@ def selecting_action_from_list(m):
 # Perform action predicted by trained classifier
 def run_action(action, m):
 	module_name, method_name = action.split(':')
-	module = user = __import__('jarvis.actions.{}'.format(module_name), globals(), locals(), ['object'], -1)
+	module = __import__('jarvis.actions.{}'.format(module_name), globals(), locals(), ['object'], -1)
 	method = getattr(module, method_name)
 	method(m)
 	
