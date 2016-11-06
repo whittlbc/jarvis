@@ -189,9 +189,9 @@ class Trainer:
 		]))
 		
 		while True:
-			question = input(self.SENTENCES_PREFIX[0])
+			question = raw_input(self.SENTENCES_PREFIX[0])
 			
-			if question.strip() in ['', 'exit']: break
+			if question.strip() == 'exit': break
 			
 			# Will contain the question as seen by the encoder
 			question_seq = []
