@@ -1,14 +1,13 @@
 from jarvis.core.message import Message
 from jarvis import logger, predictor
+from jarvis.learn.converse.rnn import Rnn
 import jarvis.actions.errors as errors
 import jarvis.actions.core as core
 import jarvis.helpers.helpers as helpers
 import jarvis.helpers.db as db
 import re
-from jarvis.learn.converse.trainer import Trainer
 
-rnn = Trainer()
-rnn.prep_for_app_use()
+rnn = Rnn()
 
 
 def perform(e):
@@ -249,7 +248,7 @@ def run_action(action, m):
 
 # Use trained seq2seq rnn to predict what Jarvis should say
 def converse(m):
-	response = rnn.daemon_predict(m.text)
+	response = rnn.predict(m.text)
 	core.trained_chat_resp(response, m.is_audio)
 	
 	
