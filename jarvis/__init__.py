@@ -12,3 +12,4 @@ app.logger.setLevel(logging.INFO)
 logger = app.logger
 
 predictor = Predictor()
+

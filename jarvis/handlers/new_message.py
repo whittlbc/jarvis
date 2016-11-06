@@ -5,6 +5,10 @@ import jarvis.actions.core as core
 import jarvis.helpers.helpers as helpers
 import jarvis.helpers.db as db
 import re
+from jarvis.learn.converse.trainer import Trainer
+
+rnn = Trainer()
+rnn.prep_for_app_use()
 
 
 def perform(e):
@@ -75,7 +79,7 @@ def fetch_memory(m):
 	if not matches: return False
 	
 	wh = matches.group(1).lower()
-	attr_type = re.sub(r'( is|\'s)', '', wh)
+	attr_type = re.sub(r'( is|\'s| are|\'re)', '', wh)
 	
 	mem_key = matches.group(2).strip().lower()
 	
@@ -243,9 +247,9 @@ def run_action(action, m):
 	method(m)
 	
 
-# use trained seq2seq model to predict what Jarvis should say
+# Use trained seq2seq rnn to predict what Jarvis should say
 def converse(m):
-	response = 'Predicted response'
+	response = rnn.daemon_predict(m.text)
 	core.trained_chat_resp(response, m.is_audio)
 	
 	

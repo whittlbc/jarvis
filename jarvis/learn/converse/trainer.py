@@ -32,8 +32,25 @@ class Trainer:
 		
 		# Tensorflow main session (keep track for the daemon)
 		self.sess = None
+			
+	def prep_for_app_use(self):
+		self.args = Args(None).parse_args()
+		self.args.test = TestMode.DAEMON
 		
-	# General initialization
+		self.load_model_params()
+		self.text_data = TextData(self.args)
+		
+		with tf.device(self.get_device()):
+			self.model = Model(self.args, self.text_data)
+		
+		self.writer = tf.train.SummaryWriter(self._get_summary_name())
+		self.saver = tf.train.Saver(max_to_keep=200)
+		
+		self.sess = tf.Session()
+		self.sess.run(tf.initialize_all_variables())
+		self.manage_previous_model(self.sess)
+		
+	# Training initialization
 	def main(self, args=None):
 		self.args = Args(args).parse_args()
 		

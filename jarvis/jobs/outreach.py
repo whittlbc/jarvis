@@ -16,7 +16,8 @@ def random_runtime():
 	now = datetime.datetime.now()
 	
 	# Get random time delta for next outreach
-	run_time = now + datetime.timedelta(hours=random_hour(), minutes=random_minute())
+	# run_time = now + datetime.timedelta(hours=random_hour(), minutes=random_minute())
+	run_time = now + datetime.timedelta(hours=0, minutes=1)
 
 	# Check to make sure this new outreach time won't interfere with sleep time
 	if during_sleep_time(run_time):
