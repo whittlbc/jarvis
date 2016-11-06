@@ -10,7 +10,7 @@ from args import Args
 
 
 class Trainer:
-	MODEL_DIR_BASE = 'jarvis/learn/converse/models'
+	MODEL_DIR_BASE = 'jarvis/learn/converse/tmp_model'
 	MODEL_NAME_BASE = 'model'
 	MODEL_EXT = '.ckpt'
 	CONFIG_FILENAME = 'params.ini'

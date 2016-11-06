@@ -59,4 +59,5 @@ docs/_build/
 config.py
 *.pkl
 tmp/
-jarvis/learn/converse/models/
+jarvis/learn/converse/model/
+jarvis/learn/converse/tmp_model/
