@@ -1,9 +1,8 @@
 from jarvis.jobs import schedule_job  # need this to reschedule our job
 import datetime
 from random import randint
-from jarvis.core.responder import respond
 from jarvis.helpers.cache import cache
-
+from jarvis.actions.outreach import fun_fact
 
 def options():
 	return {
@@ -89,18 +88,12 @@ def push_until_morning(run_time):
 	return run_time + datetime.timedelta(hours=hours_until_morning)
 
 
-# TODO: once you have some APIs built out, make a random fetch to a content API for either of the following:
-#   - News articles/blog links
-# 	- Photos
-# 	- Gifs
-# 	- Videos
-# 	- Fun facts (ala TIL on Reddit or something like that)
 def perform(app):
 	with app.test_request_context():
 		# Get current user's socket session id from Redis
 		sid = cache.get('user_sid')
 		
 		if sid:
-			respond('Hey! Hope you\'re having a great day!', room=sid)
+			fun_fact(sid)
 		
 	schedule_job(app, perform, options())

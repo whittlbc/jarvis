@@ -298,3 +298,8 @@ def forget_memory(mem_key):
 	if had_memory: cache.delete(mem_key)
 	
 	return had_memory
+
+
+def current_service_user(service_slug):
+	current_user_oid = oid(current_user())
+	return find_one('service_users', {'user_oid': current_user_oid, 'service_slug': service_slug})
