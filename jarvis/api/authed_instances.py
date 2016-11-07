@@ -8,3 +8,8 @@ def reddit(configs):
 		client_id=configs['REDDIT_CLIENT_ID'],
 		client_secret=configs['REDDIT_CLIENT_SECRET']
 	)
+
+
+def google(configs):
+	from googleapiclient.discovery import build
+	return build('customsearch', 'v1', developerKey=configs['GOOGLE_API_KEY']).cse()

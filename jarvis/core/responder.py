@@ -2,10 +2,11 @@ from flask.ext.socketio import emit
 import jarvis.helpers.db as db
 
 
-def respond(text, with_audio=False, data=None, correct_me=False, room=None):
+def respond(text, with_audio=False, data=None, correct_me=False, room=None, navigate_to=None):
 	message = {
 		'text': text,
 		'isAudio': with_audio,
+		'navigateTo': navigate_to,
 		'data': data
 	}
 	

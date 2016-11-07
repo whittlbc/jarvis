@@ -3,6 +3,7 @@ import glob
 from definitions import classify_data_path
 from jarvis.core.message import Message
 import db as db
+from slugify import slugify
 
 
 def get_actions():
@@ -65,3 +66,7 @@ def perspective_swap(text):
 		words.append(word)
 	
 	return ' '.join(words)
+
+
+def to_slug(text):
+	return slugify(text, to_lower=True, separator='_')

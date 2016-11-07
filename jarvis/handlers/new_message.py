@@ -212,7 +212,7 @@ def google(m):
 	if not query: return False
 
 	import jarvis.actions.lookup as lookup
-	lookup.google(query, is_audio=m.is_audio)
+	lookup.google(query)
 	
 	return True
 
