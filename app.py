@@ -38,7 +38,7 @@ def new_event(e):
 trainer.perform()
 
 # Add jobs to our scheduler
-# jobs.add_jobs(app)
+jobs.add_jobs(app)
 
 # Start our app
 if __name__ == '__main__':

@@ -409,7 +409,11 @@ class TextData:
 			elif word == 'i':
 				word = 'I'
 				
-			if i == 0 or word in [',', '?', '!', ';', ':', '.'] or word.startswith("'"):
+			if i == 0 \
+				or word in [',', '?', '!', ';', ':', '.', '...'] \
+				or word.startswith("'") \
+				or word.startswith("n't"):
+				
 				sentence += word
 			else:
 				sentence += ' {}'.format(word)
