@@ -52,6 +52,7 @@ def matches_text_pattern(m):
 		list_memories,
 		airhorn,
 		echo,
+		fun_fact,
 		wrong_answer,
 		selecting_action_from_list
 	]
@@ -188,8 +189,19 @@ def echo(m):
 	if m.clean_text.startswith('echo '):
 		from jarvis.actions.random import echo_resp
 		echo_resp(m)
+		
 		return True
 
+
+def fun_fact(m):
+	match = re.search('fun fact', m.text, re.I)
+	if not match: return False
+	
+	from jarvis.actions.outreach import fun_fact
+	fun_fact(is_audio=m.is_audio)
+	
+	return True
+	
 
 def selecting_action_from_list(m):
 	text_is_int = True

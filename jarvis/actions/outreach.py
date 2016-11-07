@@ -4,7 +4,7 @@ import jarvis.helpers.user as user_helper
 import re
 
 
-def fun_fact(outreach=False, sid=None, with_audio=False):
+def fun_fact(outreach=False, sid=None, is_audio=False):
 	# Get an authed Reddit instance.
 	reddit = Reddit()
 	
@@ -32,4 +32,4 @@ def fun_fact(outreach=False, sid=None, with_audio=False):
 	if text[-1] not in ['.', '!']:
 		text += '.'
 		
-	respond(text, with_audio=with_audio, room=sid)
+	respond(text, with_audio=is_audio, room=sid)
