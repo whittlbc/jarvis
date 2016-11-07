@@ -1,5 +1,6 @@
 from jarvis.jobs import schedule_job  # need this to reschedule our job
 import datetime
+from tzlocal import get_localzone
 from random import randint
 from jarvis.helpers.cache import cache
 from jarvis.actions.outreach import fun_fact
@@ -14,7 +15,7 @@ def options():
 
 
 def random_runtime():
-	now = datetime.datetime.now()
+	now = datetime.datetime.now(tz=get_localzone())
 	
 	# Get random time delta for next outreach
 	run_time = now + datetime.timedelta(hours=random_hour(), minutes=random_minute())
