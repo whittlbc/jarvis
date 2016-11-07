@@ -32,8 +32,8 @@ def find_one(collection, query):
 	return db[collection].find_one(query)
 
 
-def find_all(collection):
-	return list(db[collection].find())
+def find(collection, query=None):
+	return list(db[collection].find(query or {}))
 
 
 def messages():
@@ -276,7 +276,7 @@ def get_memories():
 	# if the memories key doesn't exist yet in redis, we should get the memory
 	# results from mongodb and store them under 'memory' key in redis (even if empty array).
 	if memories is None:
-		memories = find_all('memories')
+		memories = find('memories')
 		mem_map = {}
 		
 		for mem in memories:
@@ -303,3 +303,55 @@ def forget_memory(mem_key):
 def current_service_user(service_slug):
 	current_user_oid = oid(current_user())
 	return find_one('service_users', {'user_oid': current_user_oid, 'service_slug': service_slug})
+
+
+def content_ids_for_service(service_slug):
+	# Try fetching from cache first
+	if cache.exists('service_user_content'):
+		content_ids = cache.hget('service_user_content', service_slug)
+	else:
+		# Not in cache, so lets fetch from persistent db and then cache the results.
+		# First get the current service user (we'll need his oid)
+		csu = current_service_user(service_slug)
+			
+		# if service_user doesn't exist for this service as the current user, just return None (for now).
+		if not csu:
+			print 'Current service_user does not exist for service: {}'.format(service_slug)
+			return None
+		
+		# Fetch all service_user_content for this user, grouped by service
+		content = find('service_user_content', {'service_user_oid': oid(csu)})
+		if not content: return None
+		
+		content_by_service = {}
+		
+		for record in content:
+			service = record['service_slug']
+			
+			if not content_by_service.get(service):
+				content_by_service[service] = []
+				
+			content_by_service[service].append(record['content_id'])
+			
+		for k, v in content_by_service.iteritems():
+			cache.hset('service_user_content', k, v)
+			
+		content_ids = content_by_service[service_slug]
+		
+	return content_ids
+
+
+def add_service_user_content(content_id, service_slug):
+	csu = current_service_user(service_slug)
+	
+	# if service_user doesn't exist for this service as the current user, just return None (for now).
+	if not csu:
+		raise 'Current service_user does not exist for service: {}'.format(service_slug)
+	
+	data = {
+		'service_user_oid': oid(csu),
+		'service_slug': service_slug,
+		'content_id': content_id
+	}
+	
+	insert('service_user_content', data, remove_from_redis='service_user_content')
