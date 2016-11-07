@@ -1,36 +1,17 @@
 import requests
 from jarvis.helpers import db
-import authed_instances
 
 
 class AbstractApi(object):
 	
-	def __init__(self, service_slug, wrapper=False):
+	def __init__(self, service_slug):
 		self.service = db.service(service_slug)
+		
+		self.headers = self.service['headers']
+		self.api_url = self.service['apiUrl']
 		
 		current_service_user = db.current_service_user(service_slug)
 		self.configs = current_service_user['configs'] or {}
-	
-		self.set_service_props()
-		
-		if wrapper:
-			instance = getattr(authed_instances, service_slug)(self.configs)
-			self.transfer_attrs(self, instance)
-				
-	def set_service_props(self):
-		attrs_to_set = [
-			['headers', 'headers'],
-			['apiUrl', 'api_url']
-		]
-		
-		for attr in attrs_to_set:
-			if hasattr(self.service, attr[0]):
-				setattr(self, attr[1], self.service[attr[0]])
-
-	@staticmethod
-	def transfer_attrs(to_obj, from_obj):
-		for attr in [k for k in from_obj.__dict__.keys() if not k.startswith('__')]:
-			setattr(to_obj, attr, getattr(from_obj, attr))
 	
 	def get(self, route, **kwargs):
 		return self._make_request('get', route, **kwargs)
@@ -63,7 +44,7 @@ class AbstractApi(object):
 		response = request(self.api_url + route, **args)
 		
 		# Return the JSON response
-		return self.handle_response(response, err_message)
+		return self._handle_response(response, err_message)
 
 	def _format_headers(self, add_headers):
 		if add_headers:

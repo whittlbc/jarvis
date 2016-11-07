@@ -1,13 +1,13 @@
-from abstract_api import AbstractApi
+from wrapper import Wrapper
 import jarvis.helpers.db as db
 import time
 
 
-class Reddit(AbstractApi):
+class Reddit(Wrapper):
 	
 	def __init__(self):
 		self.slug = __name__.split('.').pop()
-		AbstractApi.__init__(self, self.slug, wrapper=True)
+		Wrapper.__init__(self, self.slug)
 
 	def unique_post(self, subreddit=None):
 		if not subreddit: return None
