@@ -340,8 +340,8 @@ class TextData:
 		# Reverse means input so no <eos> (otherwise pb with previous early stop)
 		if reverse:
 			sentence.reverse()
-		
-		return ' '.join(sentence)
+			
+		return self.prettify(sentence)
 	
 	# Convert a list of integer into a human readable string. The difference between the previous
 	# function is that on a batch object, the values have been reorganized as batch instead of sentence.
@@ -395,6 +395,29 @@ class TextData:
 		# Return the raw sentence. Let the caller do some cleaning eventually.
 		return sequence
 	
+	@staticmethod
+	def prettify(words):
+		sentence = ''
+			
+		i = 0
+		for word in words:
+			# Capitalize first word
+			if i == 0 and not word.isupper():
+				word = word.title()
+			
+			# always capitalize i's
+			elif word == 'i':
+				word = 'I'
+				
+			if i == 0 or word in [',', '?', '!', ';', ':', '.'] or word.startswith("'"):
+				sentence += word
+			else:
+				sentence += ' {}'.format(word)
+				
+			i += 1
+		
+		return sentence
+			
 	# Print a random dialogue from the dataset
 	def play_dataset(self):
 		print('Randomly playing samples:')
