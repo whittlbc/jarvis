@@ -50,9 +50,10 @@ def matches_text_pattern(m):
 		new_memory,
 		forget_memory,
 		list_memories,
+		google,
+		fun_fact,
 		airhorn,
 		echo,
-		fun_fact,
 		wrong_answer,
 		selecting_action_from_list
 	]
@@ -197,11 +198,24 @@ def fun_fact(m):
 	match = re.search('fun fact', m.text, re.I)
 	if not match: return False
 	
-	from jarvis.actions.outreach import fun_fact
-	fun_fact(is_audio=m.is_audio)
+	import jarvis.actions.outreach as outreach
+	outreach.fun_fact(is_audio=m.is_audio)
 	
 	return True
+
+
+def google(m):
+	match = re.search('^(google|you should google|will you google) (.*)', m.text, re.I)
+	if not match: return False
 	
+	query = match.group(2).strip()
+	if not query: return False
+
+	import jarvis.actions.lookup as lookup
+	lookup.google(query, is_audio=m.is_audio)
+	
+	return True
+
 
 def selecting_action_from_list(m):
 	text_is_int = True
