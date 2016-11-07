@@ -32,5 +32,4 @@ def fun_fact(outreach=False, sid=None, with_audio=False):
 	if text[-1] not in ['.', '!']:
 		text += '.'
 		
-	# respond(text, with_audio=with_audio, room=sid)
-	return text
+	respond(text, with_audio=with_audio, room=sid)

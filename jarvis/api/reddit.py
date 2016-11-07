@@ -16,7 +16,7 @@ class Reddit(AbstractApi):
 		prev_content_ids = db.content_ids_for_service(self.slug)
 			
 		if not prev_content_ids:
-			return next(self.subreddit(subreddit).new(limit=1))
+			return next(self.subreddit(subreddit).hot(limit=1))
 		else:
 			last_batch_entry = None
 			
@@ -27,7 +27,7 @@ class Reddit(AbstractApi):
 					params = None
 					
 				limit = 10
-				batch = self.subreddit(subreddit).new(limit=limit, params=params)
+				batch = self.subreddit(subreddit).hot(limit=limit, params=params)
 				
 				i = 0
 				for post in batch:
