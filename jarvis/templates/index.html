@@ -135,16 +135,12 @@
       var gatheringSpeechQuery = false;
 
       if (annyang) {
-        console.log(annyang);
         annyang.addCallback('result', function (guesses) {
           console.log(guesses);
-
 
           if (isResponding) {
             return;
           }
-
-          console.log(guesses);
 
           // if gathering result as the query to be sent to server...
           if (gatheringSpeechQuery) {
