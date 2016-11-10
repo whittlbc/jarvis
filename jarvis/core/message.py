@@ -4,6 +4,9 @@ tagdict = load('help/tagsets/upenn_tagset.pickle')
 from nltk.internals import find_jars_within_path
 from nltk.parse.stanford import StanfordParser
 from nltk.corpus import names
+from nltk.tree import Tree
+from itertools import groupby
+
 
 parser = StanfordParser(model_path="edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
 stanford_dir = parser._classpath[0].rpartition('/')[0]
@@ -96,11 +99,119 @@ class Message:
 				
 		return None
 	
-	def get_tree(self):
-		tree = self.tree or list(parser.raw_parse(self.text))[0]
-		self.tree = tree
+	def get_tree(self, text=None):
+		if text:
+			tree = list(parser.raw_parse(text))[0]
+		else:
+			tree = self.tree or list(parser.raw_parse(self.text))[0]
+			self.tree = tree
+		
 		return tree
 	
 	def is_person(self, subject):
 		if subject not in self.clean_text: return False
 		return bool(names_map.get(subject))
+	
+	def memory_components(self, text):
+		t = self.get_tree(text)
+		
+		if not self.tree_has_memory_format(t): return None
+		
+		subject = self.strip_subject(t[0][0])
+		if not subject: return None
+		
+		predicate = self.strip_predicate(t[0][1])
+		if not predicate: return None
+		
+		return subject, predicate
+		
+	def strip_subject(self, tree):
+		nps = self.group_subjects(tree)
+		NOUN_LABELS = ['NN', 'NNS', 'NNP', 'NNPS', 'PRP', 'PRP$']
+		nouns = []
+		
+		for np in nps:
+			groups = self.labeled_leaves(np)
+			pos = [g for g in groups if g[0] == 'POS' or g[0] == 'PRP$']
+			owner = ''
+			
+			if pos:
+				pos_index = groups.index(pos[0])
+				pos_label, pos_text = pos[0]
+				
+				# if "'s", we want all joined text preceeding this
+				if pos_label == 'POS':
+					owner = ' '.join([g[1] for g in groups[:pos_index]])
+				else:
+					# if just a PRP$, that text is the owner
+					owner = pos_text
+				
+				groups = groups[pos_index:]
+				
+			owned = [list(group) for k, group in groupby(groups, lambda g: g[0] not in NOUN_LABELS) if not k]
+			
+			n = []
+			for o in owned:
+				noun = ''
+				
+				for g in o:
+					noun += ' {}'.format(g[1])
+					
+				noun = noun.strip()
+				
+				n.append({
+					'noun': noun,
+					'poss': owner
+				})
+					
+			nouns.extend(n)
+				
+		return nouns
+	
+	def group_subjects(self, tree):
+		NOUN_PHRASE = 'NP'
+		POSSESSION = 'POS'
+		groupings = []
+		
+		for child in tree:
+			nps = self.children_with_label(child, NOUN_PHRASE)
+			nps = [np for np in nps if
+						 self.children_with_label(np, NOUN_PHRASE) or not self.children_with_label(np, POSSESSION)]
+			
+			if nps:
+				child_nps = [self.group_subjects(np, NOUN_PHRASE) for np in nps]
+				child_nps = [i for l in child_nps for i in l]  # flatten this out
+				groupings.extend(child_nps)
+			else:
+				if isinstance(child, Tree) and child.label() == NOUN_PHRASE:
+					groupings.append(child)
+		
+		if not groupings and tree.label() == NOUN_PHRASE:
+			groupings = [tree]
+		
+		return groupings
+	
+	def strip_predicate(self, tree):
+		return tree
+
+	def labeled_leaves(self, tree):
+		leaves = []
+		
+		for child in tree:
+			if isinstance(child, Tree):
+				leaves.extend(self.labeled_leaves(child))
+			else:
+				leaves.append([tree.label(), child])
+		
+		return leaves
+
+	@staticmethod
+	def children_with_label(tree, label):
+		return [child for child in tree if isinstance(child, Tree) and child.label() == label]
+
+	@staticmethod
+	def tree_has_memory_format(tree):
+		return tree[0].label() == 'S' \
+					and len(tree[0]) == 2 \
+					and tree[0][0].label() == 'NP' \
+					and tree[0][1].label() == 'VP'

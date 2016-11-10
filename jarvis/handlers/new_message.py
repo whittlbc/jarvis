@@ -108,6 +108,8 @@ def new_memory(m):
 	matches = re.search('(remember that|remember) (.*) ({}) (.*)'.format(patterns), m.text, re.I)
 	if not matches: return False
 	
+	# check to see if "do you " preceeds group 1...if so, switch to the recall method.
+	
 	memory = matches.group(2).strip()
 	verb_phrase = matches.group(3)
 	
