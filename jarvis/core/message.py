@@ -6,7 +6,7 @@ from nltk.parse.stanford import StanfordParser
 from nltk.corpus import names
 from nltk.tree import Tree
 from itertools import groupby
-
+import code
 
 parser = StanfordParser(model_path="edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
 stanford_dir = parser._classpath[0].rpartition('/')[0]
@@ -175,11 +175,10 @@ class Message:
 		
 		for child in tree:
 			nps = self.children_with_label(child, NOUN_PHRASE)
-			nps = [np for np in nps if
-						 self.children_with_label(np, NOUN_PHRASE) or not self.children_with_label(np, POSSESSION)]
+			nps = [np for np in nps if self.children_with_label(np, NOUN_PHRASE) or not self.children_with_label(np, POSSESSION)]
 			
 			if nps:
-				child_nps = [self.group_subjects(np, NOUN_PHRASE) for np in nps]
+				child_nps = [self.group_subjects(np) for np in nps]
 				child_nps = [i for l in child_nps for i in l]  # flatten this out
 				groupings.extend(child_nps)
 			else:
@@ -192,7 +191,58 @@ class Message:
 		return groupings
 	
 	def strip_predicate(self, tree):
-		return tree
+		VERB_CONNECTORS = ['VB', 'VBD', 'VBN']
+		STRIP_IF_LEAD = ['VBP', 'VBZ', 'MD']
+		pred_info = []
+		
+		sections = self.split_by_cc(tree)
+		
+		# For each section
+		for t in sections:
+			# Remove leading verb if type is in STRIP_IF_LEAD
+			if isinstance(t[0], Tree) and t[0].label() in STRIP_IF_LEAD:
+				t = t[1]
+			
+			sub_sections = self.split_by_cc(t)
+						
+			for s in sub_sections:
+				# TODO: Take care of what happens when PP's aren't directly here...nested under another S
+				# "going to" fucks things up
+				
+				non_pp = [c for c in s if isinstance(c, Tree) and c.label() != 'PP']
+				pp_info = None
+				
+				# if PP exists...
+				if len(non_pp) != len(s):
+					pps = [c for c in s if isinstance(c, Tree) and c.label() == 'PP']
+					pp_cc = [c for c in pps if isinstance(c, Tree) and c.label() == 'CC']
+					
+					if pp_cc:
+						pps = [c for c in pps if isinstance(c, Tree) and c.label() == 'PP']
+						
+					for pp in pps:
+						prep, np = pp
+						
+						if prep.label() != 'IN':
+							print 'Section of PP not an IN! -- it was a {}'.format(prep.label())
+
+						if np.label() != 'NP':
+							print 'Section of PP not an NP! -- it was a {}'.format(np.label())
+						
+						pp_info = [prep[0], self.strip_subject(np)]
+				
+				connector = []
+				for n in non_pp:
+					connector.extend(self.labeled_leaves(n))
+					
+				# TODO: Need to add in support for more than just verbs...adjectives and nouns
+				# Ex: Maggie is cool
+				# Ex: Maggie is my girlfriend
+				connector = ' '.join([g[1] for g in connector if g[0] in VERB_CONNECTORS])
+														
+				pred_info.append([connector, pp_info])
+					
+		return pred_info
 
 	def labeled_leaves(self, tree):
 		leaves = []
@@ -215,3 +265,12 @@ class Message:
 					and len(tree[0]) == 2 \
 					and tree[0][0].label() == 'NP' \
 					and tree[0][1].label() == 'VP'
+
+	@staticmethod
+	def split_by_cc(tree):
+		cc = [c for c in tree if isinstance(c, Tree) and c.label() == 'CC']
+		
+		if cc:
+			return [c for c in tree if isinstance(c, Tree) and c.label() != 'CC']
+		else:
+			return [tree]
