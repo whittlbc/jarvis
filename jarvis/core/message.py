@@ -112,7 +112,8 @@ class Message:
 		if subject not in self.clean_text: return False
 		return bool(names_map.get(subject))
 	
-	def memory_components(self, text):
+	def memory_comps(self, text=None):
+		text = text or self.text
 		t = self.get_tree(text)
 		
 		if not self.tree_has_memory_format(t): return None
@@ -191,59 +192,146 @@ class Message:
 		return groupings
 	
 	def strip_predicate(self, tree):
-		VERB_CONNECTORS = ['VB', 'VBD', 'VBN']
 		STRIP_IF_LEAD = ['VBP', 'VBZ', 'MD']
+		VERB_CONNECTORS = ['VB', 'VBD', 'VBN']
+		ADJ_CONNECTORS = ['JJ', 'JJR', 'JJS']
+		ADV_CONNECTORS = ['RB', 'RBR', 'RBS']
+	
 		pred_info = []
-		
 		sections = self.split_by_cc(tree)
 		
 		# For each section
 		for t in sections:
-			# Remove leading verb if type is in STRIP_IF_LEAD
+			# Strip out certain leading verbs or modals
 			if isinstance(t[0], Tree) and t[0].label() in STRIP_IF_LEAD:
 				t = t[1]
 			
+			if t.label() == 'S':
+				t = t[0]
+				
+			if t[0].label() == 'TO':
+				t = t[1]
+				
 			sub_sections = self.split_by_cc(t)
 						
 			for s in sub_sections:
-				# TODO: Take care of what happens when PP's aren't directly here...nested under another S
-				# "going to" fucks things up
-				
-				non_pp = [c for c in s if isinstance(c, Tree) and c.label() != 'PP']
-				pp_info = None
-				
-				# if PP exists...
-				if len(non_pp) != len(s):
-					pps = [c for c in s if isinstance(c, Tree) and c.label() == 'PP']
-					pp_cc = [c for c in pps if isinstance(c, Tree) and c.label() == 'CC']
+				preposition = None
+				noun_info = None
+				connectors = []
+				descriptors = {'advs': [], 'adjs': []}
+							
+				if s.label() == 'NP':
+					# TODO: still need to check for possession here (ex: Maggie is my girlfriend)
+					# TODO: should still parse what you're adding here for where/when attributes (tomorrow at 5, in the morning, later, at the house, etc.)
 					
-					if pp_cc:
-						pps = [c for c in pps if isinstance(c, Tree) and c.label() == 'PP']
-						
-					for pp in pps:
-						prep, np = pp
-						
-						if prep.label() != 'IN':
-							print 'Section of PP not an IN! -- it was a {}'.format(prep.label())
-
-						if np.label() != 'NP':
-							print 'Section of PP not an NP! -- it was a {}'.format(np.label())
-						
-						pp_info = [prep[0], self.strip_subject(np)]
-				
-				connector = []
-				for n in non_pp:
-					connector.extend(self.labeled_leaves(n))
+					# get labeled leaves, split by CC's
+					lls = [list(group) for k, group in groupby(self.labeled_leaves(s), lambda g: g[0] == 'CC') if not k]
 					
-				# TODO: Need to add in support for more than just verbs...adjectives and nouns
-				# Ex: Maggie is cool
-				# Ex: Maggie is my girlfriend
-				connector = ' '.join([g[1] for g in connector if g[0] in VERB_CONNECTORS])
-														
-				pred_info.append([connector, pp_info])
+					for ll in lls:
+						descriptors['adjs'].append(' '.join([x[1] for x in ll if x[0] != 'DT']))
+					
+					pred_info.append({
+						'noun': noun_info,
+						'prep': preposition,
+						'connectors': connectors,
+						'descriptors': descriptors
+					})
+				elif s.label() == 'PP':
+					for info in self.pp_info(s):
+						prep, noun_info = info
+						
+						pred_info.append({
+							'noun': noun_info,
+							'prep': prep,
+							'connectors': connectors,
+							'descriptors': descriptors
+						})
+				else:
+					# Chances are, s.label() == 'VP' at this point.
+					
+					# Separate out any non PP's
+					non_pp = [c for c in s if isinstance(c, Tree) and c.label() != 'PP']
+					
+					# if non_pp is empty because s doesn't have any Tree children...
+					if not non_pp and not [c for c in s if isinstance(c, Tree)] and len(s) > 0:
+						# s will be the only non_pp
+						non_pp = [s]
+					
+					groups = []
+					
+					# if PP(s) exists...
+					if len(non_pp) != len(s):
+						pps = [t for t in self.split_by_cc(s) if isinstance(t, Tree) and t.label() == 'PP'] or \
+									[t for t in s if isinstance(t, Tree) and t.label() == 'PP']
+							
+						for pp in pps:
+							groups.extend(self.pp_info(pp))
+					else:
+						nps = [c for c in non_pp if c.label() == 'NP']
+						non_pp = [c for c in non_pp if c.label() != 'NP']
+						
+						for np in nps:
+							for x in self.strip_subject(np):
+								groups.append([None, x])  # preposition is None here
+					
+					labeled_leaves = []
+					for x in non_pp:
+						labeled_leaves.extend(self.labeled_leaves(x))
+					
+					for g in labeled_leaves:
+						label, text = g
+						
+						if label in VERB_CONNECTORS:
+							connectors.append(text)
+						elif label in ADV_CONNECTORS:
+							descriptors['advs'].append(text)
+						elif label in ADJ_CONNECTORS:
+							descriptors['adjs'].append(text)
+							
+					if groups:
+						for group in groups:
+							p, ni = group
+							
+							pred_info.append({
+								'nouns': ni,
+								'prep': p,
+								'connectors': connectors,
+								'descriptors': descriptors
+							})
+					else:
+						pred_info.append({
+							'nouns': None,
+							'prep': None,
+							'connectors': connectors,
+							'descriptors': descriptors
+						})
 					
 		return pred_info
+	
+	def pp_info(self, tree):
+		# if PP of other PP's, get those. Otherwise, it'll just be the original one
+		pps = [t for t in self.split_by_cc(tree) if t.label() == 'PP']
+		
+		info = []
+		
+		for pp in pps:
+			prep, np = pp
 
+			# if np has another nested PP, take care of that
+			if [t.label() for t in np] == ['NP', 'PP']:
+				for g in self.strip_subject(np[0]):
+					info.append([prep[0], g])
+					
+				nested_pp = np[1]
+				
+				for g in self.strip_subject(nested_pp[1]):
+					info.append([nested_pp[0][0], g])
+			else:
+				for g in self.strip_subject(np):
+					info.append([prep[0], g])
+				
+		return info
+	
 	def labeled_leaves(self, tree):
 		leaves = []
 		
