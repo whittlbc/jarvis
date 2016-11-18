@@ -1,11 +1,12 @@
 from nltk import pos_tag, word_tokenize
 from nltk.data import load
 from nltk.tree import Tree
-from jarvis.helpers.nlp.stanford_parser import parser
+import jarvis.helpers.nlp.stanford_parser as sp
 from jarvis.helpers.nlp.names import names_map
 from itertools import groupby
 
 tagdict = load('help/tagsets/upenn_tagset.pickle')
+parser = sp.parser()
 
 
 class Message:

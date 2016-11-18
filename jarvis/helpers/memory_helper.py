@@ -26,19 +26,19 @@ def format_memory(text):
 	]
 	
 	for v in validations:
-		if not v(tree): return None
+		if not v(tree): return None, None
 
 	subj_tree, pred_tree = tree[0][0], tree[0][1]
 	
 	chopped_subject = chop_np(subj_tree)
 	
 	if not chopped_subject:
-		return None
+		return None, None
 	
 	format = get_predicate_format(pred_tree)
 	
 	if format not in PREDICATE_FORMATS:
-		return None
+		return None, None
 	
 	# Need to send back info about what was saved so that Jarvis can reiterate that to the user
 	return chopped_subject, format
@@ -77,7 +77,7 @@ def chop_np(np):
 	
 	subject = {'noun': None, 'owner': None}
 	adjs, advs = [], []
-	
+		
 	groups = labeled_leaves(np)
 	
 	i = 0
@@ -99,15 +99,28 @@ def chop_np(np):
 			subject['noun'] = None
 			
 		i += 1
-		
-	return {
-		'n': subject['noun'],
-		'owner': subject['owner'],
-		'adjs': adjs,
-		'advs': advs
+	
+	data = {
+		'noun': subject['noun'],
+		'owner': None,
+		'description': {
+			'adj': adjs,
+			'adv': advs
+		}
 	}
+	
+	# if possession exists
+	if subject['owner']:
+		data['owner'] = corrected_owner(subject['owner'])
+		
+	return data
 
-
+def corrected_owner(owner):
+	if owner.lower() in ['my', 'our']:
+		return 'I'
+	else:
+		return owner
+	
 def get_predicate_format(tree):
 	format = []
 	
@@ -144,9 +157,9 @@ def get_predicate_format(tree):
 				
 
 def get_verb_tag(verb):
-	lemmatized_verb = lemmatize(verb, pos='v')
+	lemmatized_verb = lemmatize(verb.lower(), pos='v')
 	
-	if lemmatized_verb == 'be':
+	if lemmatized_verb == 'be' and verb.lower() not in ['be', 'being']:
 		return 'V(BE)'
 	elif lemmatized_verb in ['have', 'own', 'possess']:
 		return 'V(OWN)'
