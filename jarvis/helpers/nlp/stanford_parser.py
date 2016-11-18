@@ -139,6 +139,25 @@ def nouns(include_words=True, include_pronouns=True, include_phrases=False, incl
 	return set(labels)
 
 
+def verbs(include_words=True, include_phrases=False):
+	labels = []
+	
+	if include_words:
+		labels += [
+			words.VERB,
+			words.VERB_PAST,
+			words.VERB_GERUND,
+			words.VERB_PAST_PARTICIPLE,
+			words.VERB_NON_3P_SING_PRESENT,
+			words.VERB_3P_SING_PRESENT,
+		]
+	
+	if include_phrases:
+		labels += [phrases.VERB_PHRASE]
+		
+	return set(labels)
+
+
 def adjectives(include_words=True, include_phrases=False, include_wh=False):
 	labels = []
 	
@@ -178,3 +197,9 @@ def adverbs(include_words=True, include_phrases=False, include_wh=False):
 			labels += [phrases.WH_ADV_PHRASE]
 
 	return set(labels)
+
+
+nouns = nouns()
+verbs = verbs()
+adjectives = adjectives()
+adverbs = adverbs()

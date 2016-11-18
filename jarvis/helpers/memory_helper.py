@@ -1,4 +1,5 @@
 import jarvis.helpers.nlp.stanford_parser as sp
+from jarvis.helpers.nlp.memory_formats import PREDICATE_FORMATS, RESTRICTED_LABELS
 from jarvis.helpers.nlp.lemmatizer import lemmatizer
 from jarvis.helpers.nlp.names import names_map
 from nltk.tree import Tree
@@ -6,70 +7,14 @@ from jarvis import logger
 
 # Configured instance of the Stanford Parser
 parser = sp.parser()
+
 words = sp.words
 phrases = sp.phrases
 clauses = sp.clauses
-
-# Labels currently restricted
-RESTRICTED_LABELS = set([
-	words.COORD_CONJUNC
-])
-
-# Tree Formats currently allowed
-PREDICATE_FORMATS = set([
-	'V(BE)',
-	'V*',
-	'V(BE) + NP(no-pp)',
-	'V(OWN) + NP(no-pp)',
-	'V* + NP(no-pp)',
-	'V(BE) + PP',
-	'V* + PP',
-	'V(BE) + NP(no-pp) + NP(no-pp)',
-	'V(OWN) + NP(no-pp) + NP(no-pp)',
-	'V* + NP(no-pp) + NP(no-pp)',
-	'V* + S-VP(TO + VP(V*))',
-	'V* + S-VP(TO + VP(V* + NP(no-pp)))',
-	'V* + S-VP(TO + VP(V* + NP(no-pp) + NP(no-pp)))',
-	'V* + S-VP(TO + VP(V* + PP))',
-	'V* + S-VP(TO + VP(V* + PP + NP(no-pp)))',
-	'V* + S-VP(TO + VP(V* + NP(no-pp) + PP)',
-	'V* + S-VP(TO + VP(V* + VP(V*)))',
-	'V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp))))',
-	'V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp) + NP(no-pp)))',
-	'V* + S-VP(TO + VP(V* + VP(V* + PP)))',
-	'V* + S-VP(TO + VP(V* + VP(V* + PP + NP(no-pp))))',
-	'V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp) + PP)))',
-	'V(BE) + VP(V*)',
-	'V(BE) + VP(V* + NP(no-pp))',
-	'V(BE) + VP(V* + PP)',
-	'V(BE) + VP(V* + NP(no-pp) + PP)',
-	'V(BE) + VP(V(BE) + VP(V* + S-VP(TO + VP(V*))))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + NP(no-pp))))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + NP(no-pp) + NP(no-pp))))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + PP)))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + PP + NP(no-pp))))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + NP(no-pp) + PP))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + VP(V*))))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp)))))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + VP(V* + PP))))',
-	'V(BE) + VP(V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp) + PP))))',
-	'MD + VP(V*)',
-	'MD + VP(V* + NP(no-pp))',
-	'MD + VP(V* + PP)',
-	'MD + VP(V* + NP(no-pp) + PP)',
-	'MD + VP(V* + S-VP(TO + VP(VB*)))',
-	'MD + VP(V* + S-VP(TO + VP(V* + NP(no-pp))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + NP(no-pp) + NP(no-pp))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + PP)))',
-	'MD + VP(V* + S-VP(TO + VP(V* + PP + NP(no-pp))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + NP(no-pp) + PP)))',
-	'MD + VP(V* + S-VP(TO + VP(V* + VP(V*))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp)))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp) + NP(no-pp))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + VP(V* + PP))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + VP(V* + PP + NP(no-pp)))))',
-	'MD + VP(V* + S-VP(TO + VP(V* + VP(V* + NP(no-pp) + PP))))'
-])
+nouns = sp.nouns
+adjectives = sp.adjectives
+adverbs = sp.adverbs
+verbs = sp.verbs
 
 
 def format_memory(text):
@@ -83,20 +28,20 @@ def format_memory(text):
 	for v in validations:
 		if not v(tree): return None
 
-	subj_tree, pred_tree = t[0][0], t[0][1]
+	subj_tree, pred_tree = tree[0][0], tree[0][1]
 	
 	chopped_subject = chop_np(subj_tree)
 	
 	if not chopped_subject:
 		return None
 	
-	if has_restricted_branch(subj_tree) or has_restricted_branch(pred_tree):
+	format = get_predicate_format(pred_tree)
+	
+	if format not in PREDICATE_FORMATS:
 		return None
 	
-	if not format:
-		return None
-
-	return True
+	# Need to send back info about what was saved so that Jarvis can reiterate that to the user
+	return chopped_subject, format
 
 
 def valid_top_level_structure(t):
@@ -118,7 +63,7 @@ def labeled_leaves(tree):
 	leaves = []
 	
 	for child in tree:
-		if isinstance(child, Tree):
+		if is_tree(child):
 			leaves.extend(labeled_leaves(child))
 		else:
 			leaves.append([tree.label(), child])
@@ -127,17 +72,11 @@ def labeled_leaves(tree):
 
 
 def chop_np(np):
-	assert_label(np, phrases.NOUN_PHRASE)
-	
 	if not valid_np_children(np):
 		return None
 	
 	subject = {'noun': None, 'owner': None}
 	adjs, advs = [], []
-	
-	noun_set = sp.nouns()
-	adj_set = sp.adjectives()
-	adv_set = sp.adverbs()
 	
 	groups = labeled_leaves(np)
 	
@@ -145,11 +84,11 @@ def chop_np(np):
 	for g in groups:
 		label, word = g
 		
-		if not subject['noun'] and label in noun_set:
+		if not subject['noun'] and label in nouns:
 			subject['noun'] = word
-		elif label in adj_set:
+		elif label in adjectives:
 			adjs.append(word)
-		elif label in adv_set:
+		elif label in adverbs:
 			advs.append(word)
 		
 		if label == words.POSSESSIVE_PRONOUN:
@@ -168,6 +107,51 @@ def chop_np(np):
 		'advs': advs
 	}
 
+
+def get_predicate_format(tree):
+	format = []
+	
+	for child in tree:
+		if is_tree(child):
+			label = child.label()
+			
+			if label in [phrases.ADJ_PHRASE, phrases.ADV_PHRASE]:
+				pass
+			
+			elif label in [clauses.DECLARATION, phrases.VERB_PHRASE]:
+				d = {}
+				d[label] = get_predicate_format(child)
+				format.extend([d])
+				
+			elif label in [phrases.NOUN_PHRASE, phrases.PREP_PHRASE]:
+				pp_children = [c for c in child if has_label(c, phrases.PREP_PHRASE)]
+				
+				if pp_children:
+					error('{} tree cannot have and PP\'s for children just yet'.format(label))
+				
+				format.append(label)
+				
+			elif label in verbs:
+				format.append(get_verb_tag(child[0]))
+				
+			elif label in [words.MODAL, words.TO]:
+				format.append(label)
+				
+			else:
+				error('Invalid tree label while parsing predicate: {}'.format(label))
+
+	return format
+				
+
+def get_verb_tag(verb):
+	lemmatized_verb = lemmatize(verb, pos='v')
+	
+	if lemmatized_verb == 'be':
+		return 'V(BE)'
+	elif lemmatized_verb in ['have', 'own', 'possess']:
+		return 'V(OWN)'
+	else:
+		return 'V*'
 
 def valid_np_children(np):
 	valid_child_labels = set([
@@ -204,7 +188,7 @@ def all_nested_labels(tree):
 	labels = []
 	
 	for child in tree:
-		if isinstance(child, Tree):
+		if is_tree(child):
 			labels.append(child.label())
 			labels.extend(all_nested_labels(child))
 	
@@ -216,7 +200,15 @@ def to_tree(text):
 
 
 def children_with_label(tree, label):
-	return [child for child in tree if isinstance(child, Tree) and child.label() == label]
+	return [child for child in tree if is_tree(child) and child.label() == label]
+
+
+def has_label(t, label):
+	return is_tree(t) and t.label() == label
+
+
+def is_tree(t):
+	return isinstance(t, Tree)
 
 
 def lemmatize(w, pos='n'):
@@ -228,7 +220,7 @@ def is_name(name):
 
 
 def assert_label(tree, label):
-	if not isinstance(tree, Tree):
+	if not is_tree(tree):
 		error('Label Assertion Error: Tree isn\'t even a tree: {}'.format(tree))
 		
 	if tree.label() != label:
