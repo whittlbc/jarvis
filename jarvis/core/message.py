@@ -1,21 +1,11 @@
 from nltk import pos_tag, word_tokenize
 from nltk.data import load
-tagdict = load('help/tagsets/upenn_tagset.pickle')
-from nltk.internals import find_jars_within_path
-from nltk.parse.stanford import StanfordParser
-from nltk.corpus import names
 from nltk.tree import Tree
+from jarvis.helpers.nlp.stanford_parser import parser
+from jarvis.helpers.nlp.names import names_map
 from itertools import groupby
-import code
 
-parser = StanfordParser(model_path="edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
-stanford_dir = parser._classpath[0].rpartition('/')[0]
-parser._classpath = tuple(find_jars_within_path(stanford_dir))
-
-names_map = dict(
-	[(name.lower(), 'male') for name in names.words('male.txt')] +
-	[(name.lower(), 'female') for name in names.words('female.txt')]
-)
+tagdict = load('help/tagsets/upenn_tagset.pickle')
 
 
 class Message:

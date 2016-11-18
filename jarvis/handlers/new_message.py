@@ -5,6 +5,7 @@ import jarvis.actions.errors as errors
 import jarvis.actions.core as core
 import jarvis.helpers.helpers as helpers
 import jarvis.helpers.db as db
+from jarvis.helpers.memory_helper import format_memory
 import re
 
 rnn = Rnn()
@@ -96,37 +97,38 @@ def fetch_memory(m):
 
 
 def new_memory(m):
-	pos = ['is', 'are', 'was', 'will be']
-	preps = ['on', 'in', 'at']
-	patterns = []
+	# pos = ['is', 'are', 'was', 'will be']
+	# preps = ['on', 'in', 'at']
+	# patterns = []
+	#
+	# for p in pos:
+	# 	patterns += ([p + ' {}'.format(prep) for prep in preps] + [p])
+	#
+	# patterns = '|'.join(['as'] + patterns)
 	
-	for p in pos:
-		patterns += ([p + ' {}'.format(prep) for prep in preps] + [p])
-		
-	patterns = '|'.join(['as'] + patterns)
-	
-	matches = re.search('(remember that|remember) (.*) ({}) (.*)'.format(patterns), m.text, re.I)
+	matches = re.search('^(remember that|remember) (.*)', m.text, re.I)
 	if not matches: return False
 	
-	# check to see if "do you " preceeds group 1...if so, switch to the recall method.
+	mem_phrase = matches.group(1).strip().rstrip('?:!.,;')
+	result = format_memory(mem_phrase)
 	
-	memory = matches.group(2).strip()
-	verb_phrase = matches.group(3)
-	
-	# Decide what attribute type is being defined about the memory: who, what, when, or where.
-	attr_type = get_attr_type(m, memory, verb_phrase)
-	attr_value = matches.group(4).strip()
-	
-	if not attr_value: return False
-	
-	if attr_value[-1] in ('.', '?', '!'):
-		attr_value = attr_value[:-1]
-	
-	# Respond
-	core.resp_new_memory(memory, verb_phrase, attr_value, m.is_audio)
-	
-	# Add memory to DB
-	db.update_memory(memory, attr_type, attr_value)
+	# memory = matches.group(1).strip()
+	# verb_phrase = matches.group(3)
+	#
+	# # Decide what attribute type is being defined about the memory: who, what, when, or where.
+	# attr_type = get_attr_type(m, memory, verb_phrase)
+	# attr_value = matches.group(4).strip()
+	#
+	# if not attr_value: return False
+	#
+	# if attr_value[-1] in ('.', '?', '!'):
+	# 	attr_value = attr_value[:-1]
+	#
+	# # Respond
+	# core.resp_new_memory(memory, verb_phrase, attr_value, m.is_audio)
+	#
+	# # Add memory to DB
+	# db.update_memory(memory, attr_type, attr_value)
 	
 	return True
 	

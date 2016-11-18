@@ -41,7 +41,7 @@ Does it look like snow tomorrow?|utils:weather
 How hot is it going to be this week?|utils:weather
 What does the heat index look like?|utils:weather
 What temperature does it appear to be?|utils:weather
-Are there clouds in the sky today jarvis?|utils:weather
+Are there clouds in the sky today?|utils:weather
 Is it burning up out there today or no?|utils:weather
 Is it freezing today?|utils:weather
 Does it seem to be drizzling outside?|utils:weather
@@ -55,7 +55,7 @@ Show me how windy it is.|utils:weather
 Tell me what the temperature is.|utils:weather
 Does it look like tornadoes for the week?|utils:weather
 Is there going to be a hurricane in Florida this week?|utils:weather
-Are there going to be flurries tonight Jarvis?|utils:weather
+Are there going to be flurries tonight?|utils:weather
 Gale force winds tonight or no?|utils:weather
 Show me the weekly forecast.|utils:weather
 How much is it predicted to snow on Friday?|utils:weather
@@ -98,7 +98,7 @@ How chilly willy is it right fucking now?|utils:weather
 Is it fucking cold right now?|utils:weather
 How likely is precipitation for later?|utils:weather
 How's friday's weather look?|utils:weather
-how's the weather today jarvis?|utils:weather
+how's the weather today?|utils:weather
 rain today homie?|utils:weather
 weather today?|utils:weather
 wait what was the forecast for tmw again?|utils:weather
@@ -150,12 +150,12 @@ how's the weather|utils:weather
 weather|utils:weather
 tell me how the weather is going to be|utils:weather
 how's the weather|utils:weather
-hey Jarvis how's the weather|utils:weather
-Jarvis how's the weather|utils:weather
-Jarvis hit me with the weather|utils:weather
-Jarvis how's the weather|utils:weather
-yo jarvis what's the weather|utils:weather
-hey jarvis how's the weather|utils:weather
+hey how's the weather|utils:weather
+how's the weather|utils:weather
+hit me with the weather|utils:weather
+how's the weather|utils:weather
+yo what's the weather|utils:weather
+hey how's the weather|utils:weather
 how's the weather|utils:weather
 weather me|utils:weather
 how's the weather|utils:weather
@@ -166,3 +166,6 @@ how's the weather|utils:weather
 hey man how's the weather?|utils:weather
 what's the weather?|utils:weather
 how's the weather right now?|utils:weather
+how's the weather right now|utils:weather
+should I wear a jacket tomorrow|utils:weather
+how's the weather|utils:weather

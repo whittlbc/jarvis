@@ -28,7 +28,7 @@ and what's my name again?|user:name
 what's my name?|user:name
 What's my first name?|user:name
 and my last name is?|user:name
-What be my last name jarvis|user:name
+What be my last name|user:name
 and what's my first name?|user:name
 Tell me my name|user:name
 What's my name dude?|user:name
@@ -68,7 +68,7 @@ who am I|user:name
 and what be my first name?|user:name
 what's my full name?|user:name
 my fullname is what?|user:name
-who am I jarvis?|user:name
+who am I?|user:name
 and who are you?|user:name
 What's your last name?|user:name
 what's my last name?|user:name
@@ -120,7 +120,6 @@ who the fuck are you?|user:name
 who the fuck are you?|user:name
 who are you?|user:name
 got a first name?|user:name
-hey jarvis name me|user:name
 what's your name?|user:name
 and what's my name?|user:name
 Tell me your first name|user:name
@@ -182,15 +181,14 @@ what should I call you|user:name
 who are you|user:name
 and who am I|user:name
 do you have a last name|user:name
-Jarvis who are you|user:name
+who are you|user:name
 who're you?|user:name
-Jarvis who's my buddy|user:name
-jarvis who are you|user:name
-jarvis what's your last name|user:name
-siri what's your name|user:name
-siri what's my name|user:name
-eliza what's your name|user:name
-who am i/|user:name
+who are you|user:name
+what's your last name|user:name
+what's your name|user:name
+what's my name|user:name
+what's your name|user:name
+who am i|user:name
 who am i|user:name
 who are you|user:name
 who are you|user:name
@@ -205,3 +203,6 @@ what's your name?|user:name
 what should I call you?|user:name
 what's my first name?|user:name
 what's your last name|user:name
+what is your name?|user:name
+what is your name?|user:name
+who are you?|user:name
