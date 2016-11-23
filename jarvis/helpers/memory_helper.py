@@ -30,9 +30,9 @@ def format_memory(text):
 
 	subj_tree, pred_tree = tree[0][0], tree[0][1]
 	
-	chopped_subject = chop_np(subj_tree)
+	subject = chop_np(subj_tree)
 	
-	if not chopped_subject:
+	if not subject:
 		return None, None
 	
 	format, pred_content = get_predicate_format(pred_tree)
@@ -41,18 +41,68 @@ def format_memory(text):
 		return None, None
 	
 	leading_v = pred_content[0]
+	leading_v_label = leading_v.keys()[0]
+	leading_v_word = leading_v[leading_v_label]
+	
 	modeled_content = format_modeled_content(pred_content[1:])
 	
-	# pred_handler = {
-	# 	'V(BE)': handle_be,
-	# 	'V(OWN)': handle_own,
-	# 	'V*': handle_action
-	# 	# ignore MD starter for now...won't have to do this if we strip those anyways.
-	# }[format[0]]
+	# [
+	# 	{
+	# 		'action': {
+	# 			'v': 'playing',
+	# 			'adj': [],
+	# 			'adv': [],
+	# 			'subject': {
+	# 				'owner': None,
+	# 				'noun': 'basketball',
+	# 				'description': {
+	# 					'adv': [],
+	# 					'adj': []
+	# 				}
+	# 			}
+	# 		}
+	# 	}
+	# ]
 	
-	# info = pred_handler(pred_content)
+	# iterate through, upserting subjects
 	
+	subjects = []
+	actions = []
+	rels = []
 	
+	# for each grouping
+	for data in model_content:
+		# if a base subject exists on it's own
+		if data.get('subject'):
+			subjects.append({'data': data['subject']})
+		
+			# if leading_v_label in ['V(BE)', 'V(OWN)']:
+			# 	rels.append({
+			# 		'a_id': subject['noun_id'].id,
+			# 		'b_id': s['noun_id'].id,
+			# 		'type': leading_v_label
+			# 	})
+		
+		# if an action exists
+		if data.get('action'):
+			a = data['action']
+			
+			# get the subject the action acts upon
+			if a.get('subject'):
+				subjects.append({'data': a['subject'], 'cb': lambda subj_id: upsert_action(a, subj_id)})
+			else:
+				actions.append({'data': a})
+					
+					
+	for s in subjects:
+		upsert_subject(s)
+		
+	for a in actions:
+		upsert_action(a)
+		
+	import code; code.interact(local=dict(globals(), **locals()))
+															
+
 	# if predicate has a noun phrase in it, we're dealing with some sort of relationship
 	# if format_has_label(format, phrases.NOUN_PHRASE):
 		# Figure out what type of relationship
@@ -70,6 +120,19 @@ def format_memory(text):
 	return chopped_subject, format
 
 
+def upsert_subject(s):
+	data = s['data']
+
+	if s.get('cb'):
+		s['cb'](subject.id)
+
+
+def upsert_action(a, subj_id=None):
+	data = a['data']
+
+	if a.get('cb'):
+		a['cb'](subject.id)
+		
 # [
 # 	[{'V*': 'playing'}, {'NP': {'owner': None, 'noun': 'basketball', 'description': {'adv': [], 'adj': []}}}]
 # ]
@@ -79,7 +142,7 @@ def format_modeled_content(data):
 		
 	for child in data:
 		if isinstance(child, list):
-			modeled_data.extend([format_modeled_content(child)])
+			modeled_data.extend(format_modeled_content(child))
 			return modeled_data
 		else:
 			key = child.keys()[0]
@@ -89,8 +152,7 @@ def format_modeled_content(data):
 				content['action'] = {
 					'v': val,
 					'adj': [],
-					'adv': [],
-					'subject': None
+					'adv': []
 				}
 				
 			elif key == 'NP':
@@ -103,41 +165,6 @@ def format_modeled_content(data):
 			
 	return modeled_data
 
-
-def handle_be(pred_content):
-	content = []
-	
-	for child in pred_content[1:]:
-		label = child.keys()[0]
-		
-		data = {}
-		
-		if label == phrases.VERB_PHRASE:
-			content.extend([handle_be(child[label])])
-		
-		elif label == phrases.NOUN_PHRASE:
-			data['noun'] = chop_np(child[label])
-			content.append(data)
-			
-		elif label == phrases.PREP_PHRASE:
-			data['pp'] = chop_pp(child[label])
-			content.append(data)
-		
-		elif label in verbs:
-			data['action'] = child[label]
-			content.append(data)
-		
-	return content
-
-
-def handle_own(pred_content):
-	# NP exists. You know this already
-	print
-
-
-def handle_action(pred_content):
-	print
-	
 
 def format_has_label(format, label, final_return=True):
 	bools = []
