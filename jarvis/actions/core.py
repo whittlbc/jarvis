@@ -11,14 +11,18 @@ def whatup(m):
 	respond(r.random_whatup(), with_audio=m.is_audio)
 
 
-def resp_new_memory(memory, verb_phrase, attr_value, is_audio):
-	if verb_phrase == 'as':
-		verb_phrase = 'is'
-		
-	memory = helpers.perspective_swap(memory)
-	attr_value = helpers.perspective_swap(attr_value)
-		
-	respond('Got it! Remembering that {} {} {}.'.format(memory, verb_phrase, attr_value), with_audio=is_audio)
+# def resp_new_memory(memory, verb_phrase, attr_value, is_audio):
+# 	if verb_phrase == 'as':
+# 		verb_phrase = 'is'
+#
+# 	memory = helpers.perspective_swap(memory)
+# 	attr_value = helpers.perspective_swap(attr_value)
+#
+# 	respond('Got it! Remembering that {} {} {}.'.format(memory, verb_phrase, attr_value), with_audio=is_audio)
+
+
+def resp_new_memory(is_audio):
+	respond('Okay', with_audio=is_audio)
 
 
 def remember(memory, is_audio):

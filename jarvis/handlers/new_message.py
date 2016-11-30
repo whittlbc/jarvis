@@ -5,7 +5,7 @@ import jarvis.actions.errors as errors
 import jarvis.actions.core as core
 import jarvis.helpers.helpers as helpers
 import jarvis.helpers.db as db
-from jarvis.helpers.memory_helper import format_memory
+from jarvis.helpers.memory_helper import format_memory, query_memory
 import re
 
 rnn = Rnn()
@@ -48,7 +48,7 @@ def perform(e):
 def matches_text_pattern(m):
 	potential_matches = [
 		fetch_memory,
-		new_memory,
+		store_memory,
 		forget_memory,
 		list_memories,
 		google,
@@ -66,71 +66,26 @@ def matches_text_pattern(m):
 
 
 def fetch_memory(m):
-	wh = ['who', 'what', 'when', 'where']
-	patterns = []
+	answer = query_memory(m.text)
 	
-	for w in wh:
-		patterns += ['{} is'.format(w), '{}\'s'.format(w), '{} are'.format(w)]
-		
-		if w in ['who', 'what']:
-			patterns.append('{}\'re'.format(w))
-		
-	patterns = '({}) (.*)'.format('|'.join(patterns))
-	
-	matches = re.search(patterns, m.text, re.I)
-	if not matches: return False
-	
-	wh = matches.group(1).lower()
-	attr_type = re.sub(r'( is|\'s| are|\'re)', '', wh)
-	
-	mem_key = matches.group(2).strip().lower()
-	
-	if mem_key[-1] in ('.', '?', '!'):
-		mem_key = mem_key[:-1]
+	if answer:
+		core.remember(answer, m.is_audio)
+		return True
 
-	memory = db.get_memory(mem_key, attr_type)
-	
-	if not memory: return False
-	core.remember(memory, m.is_audio)
-	
-	return True
+	return False
 
 
-def new_memory(m):
-	# pos = ['is', 'are', 'was', 'will be']
-	# preps = ['on', 'in', 'at']
-	# patterns = []
-	#
-	# for p in pos:
-	# 	patterns += ([p + ' {}'.format(prep) for prep in preps] + [p])
-	#
-	# patterns = '|'.join(['as'] + patterns)
-	
+def store_memory(m):
 	matches = re.search('^(remember that|remember) (.*)', m.text, re.I)
 	if not matches: return False
 	
-	mem_phrase = matches.group(1).strip().rstrip('?:!.,;')
-	result = format_memory(mem_phrase)
+	mem_phrase = matches.group(1)
 	
-	# memory = matches.group(1).strip()
-	# verb_phrase = matches.group(3)
-	#
-	# # Decide what attribute type is being defined about the memory: who, what, when, or where.
-	# attr_type = get_attr_type(m, memory, verb_phrase)
-	# attr_value = matches.group(4).strip()
-	#
-	# if not attr_value: return False
-	#
-	# if attr_value[-1] in ('.', '?', '!'):
-	# 	attr_value = attr_value[:-1]
-	#
-	# # Respond
-	# core.resp_new_memory(memory, verb_phrase, attr_value, m.is_audio)
-	#
-	# # Add memory to DB
-	# db.update_memory(memory, attr_type, attr_value)
+	if format_memory(mem_phrase):
+		core.resp_new_memory(m.is_audio)
+		return True
 	
-	return True
+	return False
 	
 
 def get_attr_type(m, memory, verb_phrase):

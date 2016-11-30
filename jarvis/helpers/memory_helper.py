@@ -18,35 +18,41 @@ nouns = sp.nouns
 adjectives = sp.adjectives
 adverbs = sp.adverbs
 verbs = sp.verbs
+modals = sp.modals
 
 models = Models()
 
 
+################################
+# STORAGE
+################################
+
 def format_memory(text):
+	text = strip_trailing_punc(text)
 	tree = to_tree(text)
 	
-	validations = [
-		valid_top_level_structure,
+	tree_validations = [
+		valid_storage_format,
 		valid_labels
 	]
 	
-	for v in validations:
+	for v in tree_validations:
 		if not v(tree): 
-			return None, None
+			return False
 
 	subj_tree, pred_tree = tree[0][0], tree[0][1]
 	
 	subject = chop_np(subj_tree)
 	
 	if not subject:
-		return None, None
+		return False
 	
 	# chop_predicate should call the reduce_predicate method
 	format, pred_content = chop_predicate(pred_tree)
 	
 	if format not in PREDICATE_FORMATS:
-		return None, None
-		
+		return False
+	
 	leading_v_label = pred_content[0].keys()[0]
 	
 	# if action
@@ -255,6 +261,8 @@ def format_memory(text):
 	rel_subj_actions_uid_id_map = upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map, rel_uid_id_map)
 	rel_rel_actions_uid_id_map = upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
 	
+	return True
+	
 
 def upsert_subjects(subjects):
 	uid_id_map = {}
@@ -427,31 +435,11 @@ def format_has_label(format, label, final_return=True):
 		return bools
 
 
-def valid_top_level_structure(t):
+def valid_storage_format(t):
 	return t[0].label() == clauses.DECLARATION \
 		and len(t[0]) == 2 \
 		and t[0][0].label() == phrases.NOUN_PHRASE \
 		and t[0][1].label() == phrases.VERB_PHRASE
-
-
-def valid_labels(tree):
-	for label in [l[0] for l in labeled_leaves(tree)]:
-		if label in RESTRICTED_LABELS:
-			return False
-	
-	return True
-
-
-def labeled_leaves(tree):
-	leaves = []
-	
-	for child in tree:
-		if is_tree(child):
-			leaves.extend(labeled_leaves(child))
-		else:
-			leaves.append([tree.label(), child])
-	
-	return leaves
 
 
 # Need to format a response into some when/where/with style structure
@@ -505,6 +493,7 @@ def chop_np(np):
 		data['owner'] = corrected_owner(subject['owner'])
 		
 	return data
+
 
 # TODO: Add a correction for 'your' that maps to the bot's name
 def corrected_owner(owner):
@@ -577,6 +566,77 @@ def get_verb_tag(verb):
 		return 'V(OWN)'
 	else:
 		return 'V*'
+	
+	
+################################
+# RETRIEVAL
+################################
+
+def query_memory(text):
+	text = strip_trailing_punc(text)
+	
+	# Replace leading 'do' with 'did' --> TODO: change to regex
+	if text.split()[0].lower() == 'do':
+		text = ' '.join(['Did'] + text.split()[1:])
+	
+	tree = to_tree(text)
+
+	if not valid_labels(tree):
+		return None
+	
+	if not valid_query_format(tree, text):
+		return None
+	
+	return 'Answer'
+
+
+def valid_query_format(tree, text):
+	return is_wh_query(tree) or is_yes_no_query(tree, text)
+
+
+def is_wh_query(t):
+	return t[0].label() == clauses.DIRECT_WH_QUESTION \
+		and len(t[0]) == 2 \
+		and t[0][0].label() in [phrases.WH_NOUN_PHRASE, phrases.WH_ADV_PHRASE] \
+		and t[0][1].label() == clauses.INVERTED_YES_NO
+
+
+def is_yes_no_query(tree, text):
+	lead_word = text.split()[0].lower()
+	lead_word_prompts_yn = lemmatize(lead_word, pos='v') in ['be', 'do'] or lead_word in modals
+	
+	return lead_word_prompts_yn \
+	  and tree[0].label() == clauses.INVERTED_DECLARATION \
+		and len(tree[0]) in [2, 3]
+
+
+################################
+# HELPERS
+################################
+
+def valid_labels(tree):
+	for label in [l[0] for l in labeled_leaves(tree)]:
+		if label in RESTRICTED_LABELS:
+			return False
+	
+	return True
+
+
+def labeled_leaves(tree):
+	leaves = []
+	
+	for child in tree:
+		if is_tree(child):
+			leaves.extend(labeled_leaves(child))
+		else:
+			leaves.append([tree.label(), child])
+	
+	return leaves
+
+
+def strip_trailing_punc(text):
+	return text.strip().rstrip('?:!.,;')
+
 
 def valid_np_children(np):
 	valid_child_labels = set([

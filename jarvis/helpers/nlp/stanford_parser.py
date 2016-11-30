@@ -37,7 +37,7 @@ class Phrases:
 	UNLIKE_COORD_PHRASE = 'UCP'
 	VERB_PHRASE = 'VP'
 	WH_ADJ_PHRASE = 'WHADJP'
-	WH_ADV_PHRASE = 'WHAVP'
+	WH_ADV_PHRASE = 'WHADVP'
 	WH_NOUN_PHRASE = 'WHNP'
 	WH_PREP_PHRASE = 'WHPP'
 	UNKNOWN = 'X'
@@ -199,7 +199,22 @@ def adverbs(include_words=True, include_phrases=False, include_wh=False):
 	return set(labels)
 
 
+def modals():
+	return set([
+		'can',
+		'could',
+		'may',
+		'might',
+		'will',
+		'would',
+		'shall',
+		'should',
+		'must'
+	])
+
+
 nouns = nouns()
 verbs = verbs()
 adjectives = adjectives()
 adverbs = adverbs()
+modals = modals()
