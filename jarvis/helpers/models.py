@@ -1,0 +1,12 @@
+class Models:
+	SUBJECT = 'Subject'
+	REL = 'Rel'
+	REL_SUBJECT = 'RelSubject'
+	REL_REL = 'RelRel'
+	ACTION = 'Action'
+	SUBJECT_SUBJECT_ACTION = 'SubjectSubjectAction'
+	REL_SUBJECT_ACTION = 'RelSubjectAction'
+	REL_REL_ACTION = 'RelRelAction'
+	DATETIME = 'Datetime'
+	LOCATION = 'Location'
+	DESCRIPTION = 'Description'
