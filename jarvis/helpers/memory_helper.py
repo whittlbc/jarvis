@@ -108,7 +108,7 @@ def format_memory(text):
 			if data.get('action'):
 				a = data['action']
 				action_uid = uid()
-				actions[action_uid] = {'orig': a['v']}
+				actions[action_uid] = {'verb': a['v']}
 				
 				action_subj = a['subject']
 				
@@ -324,11 +324,10 @@ def upsert_actions(actions):
 	
 	for k, v in actions.items():
 		data = {
-			'lower': v['orig'].lower(),
-			'orig': v['orig']
+			'verb': lemmatize(v['verb'].lower(), pos='v')
 		}
 		
-		id = upsert(models.ACTION, data, unique_to=['lower'])
+		id = upsert(models.ACTION, data)
 		uid_id_map[k] = id
 	
 	return uid_id_map

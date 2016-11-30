@@ -1,8 +1,13 @@
 from psycopg2 import connect
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2.extras import DictCursor
 
 con = connect(dbname='memory')
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+
+
+def cursor():
+	return con.cursor(cursor_factory=DictCursor)
 
 
 def insert_one(model, data, cur=None):
@@ -21,24 +26,25 @@ def insert_one(model, data, cur=None):
 	keys = ', '.join(keys)
 	vals = ', '.join(vals)
 	
-	cur = cur or con.cursor()
+	cur = cur or cursor()
 	cur.execute("INSERT INTO {} ({}) VALUES ({}) RETURNING id;".format(model, keys, vals))
 	return cur.fetchone()[0]
 
 
 def find_one(model, query, cur=None):
-	formatted_query = keyify(query, connector='AND')
+	formatted_query = keyify(query, connector=' AND ')
 	
-	cur = cur or con.cursor()
+	cur = cur or cursor()
 	cur.execute("SELECT * FROM {} WHERE {} LIMIT 1;".format(model, formatted_query))
-	return cur.fetchone()[0]
+	return cur.fetchone()
 		
 
 def upsert(model, data, unique_to=None):
-	cur = con.cursor()
+	cur = cursor()
 	unique_to = unique_to or data.keys()
 	
 	query = {k: data[k] for k in unique_to}
+	
 	record = find_one(model, query, cur=cur)
 	
 	if record:
@@ -52,7 +58,17 @@ def upsert(model, data, unique_to=None):
 	
 	
 def keyify(d, connector=''):
-	return connector.join(['{} = {}'.format(k, v) for k, v in d.items()])
+	groups = []
+	
+	for k, v in d.items():
+		if isinstance(v, basestring):
+			v = "'{}'".format(v)
+		else:
+			v = str(v)
+		
+		groups.append('{} = {}'.format(k, v))
+	
+	return connector.join(groups)
 	
 
 def error(msg=''):

@@ -64,9 +64,3 @@ PREDICATE_FORMATS = [
 RESTRICTED_LABELS = set([
 	words.COORD_CONJUNC
 ])
-
-
-# def reduced(format):
-# 	return {
-# 		"['V(BE)',{'VP':['V*']}]": ['V*'],
-# 	}.get(str(format).replace(' ', ''))
