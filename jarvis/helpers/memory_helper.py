@@ -6,6 +6,7 @@ from nltk.tree import Tree
 from jarvis import logger
 from numpy import random
 from jarvis.helpers.models import Models
+from jarvis.helpers.pg import upsert
 
 # Configured instance of the Stanford Parser
 parser = sp.parser()
@@ -53,25 +54,7 @@ def format_memory(text):
 		modeled_content = format_modeled_content(pred_content)
 	else:
 		modeled_content = format_modeled_content(pred_content[1:])
-	
-	# [
-	# 	{
-	# 		'action': {
-	# 			'v': 'playing',
-	# 			'adj': [],
-	# 			'adv': [],
-	# 			'subject': {
-	# 				'owner': None,
-	# 				'noun': 'basketball',
-	# 				'description': {
-	# 					'adv': [],
-	# 					'adj': []
-	# 				}
-	# 			}
-	# 		}
-	# 	}
-	# ]
-		
+
 	# Models
 	subjects = {}
 	rels = {}
@@ -96,7 +79,7 @@ def format_memory(text):
 		rels[lead_subj_rel_uid] = {
 			'subj_a_uid': lead_subj_owner_uid,
 			'subj_b_uid': lead_subj_noun_uid,
-			'order': 1	# change to class constants somewhere
+			'relation': 1	# change to class constants somewhere
 		}
 	
 	# for each grouping
@@ -119,7 +102,7 @@ def format_memory(text):
 					rels[outer_subj_rel_uid] = {
 						'subj_a_uid': outer_subj_owner_uid,
 						'subj_b_uid': outer_subj_noun_uid,
-						'order': 1  # change to class constants somewhere
+						'relation': 1  # change to class constants somewhere
 					}
 			
 			if data.get('action'):
@@ -142,7 +125,7 @@ def format_memory(text):
 					rels[action_subj_rel_uid] = {
 						'subj_a_uid': action_subj_owner_uid,
 						'subj_b_uid': action_subj_noun_uid,
-						'order': 1  # change to class constants somewhere
+						'relation': 1  # change to class constants somewhere
 					}
 				
 				if lead_subj_type == 'subj' and action_subj_type == 'subj':
@@ -159,7 +142,7 @@ def format_memory(text):
 						'rel_uid': lead_subj_rel_uid,
 						'subject_uid': action_subj_noun_uid,
 						'action_uid': action_uid,
-						'order': 1
+						'direction': 1
 					}
 					
 				elif lead_subj_type == 'subj' and action_subj_type == 'rel':
@@ -168,7 +151,7 @@ def format_memory(text):
 						'rel_uid': action_subj_rel_uid,
 						'subject_uid': lead_subj_noun_uid,
 						'action_uid': action_uid,
-						'order': -1
+						'direction': -1
 					}
 					
 				else:
@@ -198,7 +181,7 @@ def format_memory(text):
 					rels[outer_subj_rel_uid] = {
 						'subj_a_uid': outer_subj_owner_uid,
 						'subj_b_uid': outer_subj_noun_uid,
-						'order': 1  # change to class constants somewhere
+						'relation': 1  # change to class constants somewhere
 					}
 				
 				if lead_subj_type == 'subj' and outer_subj_type == 'subj':
@@ -212,7 +195,7 @@ def format_memory(text):
 					rels[rel_uid] = {
 						'subj_a_uid': lead_subj_noun_uid,
 						'subj_b_uid': outer_subj_noun_uid,
-						'order': order
+						'relation': order
 					}
 					
 				elif lead_subj_type == 'rel' and outer_subj_type == 'subj':
@@ -226,7 +209,7 @@ def format_memory(text):
 					rel_subjects[rel_subj_uid] = {
 						'rel_uid': lead_subj_rel_uid,
 						'subject_uid': outer_subj_noun_uid,
-						'order': order
+						'relation': order
 					}
 					
 				elif lead_subj_type == 'subj' and outer_subj_type == 'rel':
@@ -240,7 +223,7 @@ def format_memory(text):
 					rel_subjects[rel_subj_uid] = {
 						'rel_uid': outer_subj_rel_uid,
 						'subject_uid': lead_subj_noun_uid,
-						'order': order
+						'relation': order
 					}
 					
 				else:
@@ -254,7 +237,7 @@ def format_memory(text):
 					rel_rels[rel_rel_uid] = {
 						'rel_a_uid': lead_subj_rel_uid,
 						'rel_b_uid': outer_subj_rel_uid,
-						'order': order
+						'relation': order
 					}
 				
 	
@@ -272,9 +255,6 @@ def format_memory(text):
 	rel_subj_actions_uid_id_map = upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map, rel_uid_id_map)
 	rel_rel_actions_uid_id_map = upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
 	
-	# Need to send back info about what was saved so that Jarvis can reiterate that to the user
-	return None, None
-
 
 def upsert_subjects(subjects):
 	uid_id_map = {}
@@ -285,7 +265,7 @@ def upsert_subjects(subjects):
 			'orig': v['orig']
 		}
 				
-		id = upsert(models.SUBJECT, data)
+		id = upsert(models.SUBJECT, data, unique_to=['lower'])
 		uid_id_map[k] = id
 		
 	return uid_id_map
@@ -298,7 +278,7 @@ def upsert_rels(rels, subj_uid_id_map):
 		data = {
 			'a_id': subj_uid_id_map[v['subj_a_uid']],
 			'b_id': subj_uid_id_map[v['subj_b_uid']],
-			'order': v['order']
+			'relation': v['relation']
 		}
 		
 		id = upsert(models.REL, data)
@@ -314,7 +294,7 @@ def upsert_rel_subjects(rel_subjects, subj_uid_id_map, rel_uid_id_map):
 		data = {
 			'rel_id': rel_uid_id_map[v['rel_uid']],
 			'subject_id': subj_uid_id_map[v['subject_uid']],
-			'order': v['order']
+			'relation': v['relation']
 		}
 		
 		id = upsert(models.REL_SUBJECT, data)
@@ -330,7 +310,7 @@ def upsert_rel_rels(rel_rels, rel_uid_id_map):
 		data = {
 			'a_id': rel_uid_id_map[v['rel_a_uid']],
 			'b_id': rel_uid_id_map[v['rel_b_uid']],
-			'order': v['order']
+			'relation': v['relation']
 		}
 		
 		id = upsert(models.REL_REL, data)
@@ -348,7 +328,7 @@ def upsert_actions(actions):
 			'orig': v['orig']
 		}
 		
-		id = upsert(models.ACTION, data)
+		id = upsert(models.ACTION, data, unique_to=['lower'])
 		uid_id_map[k] = id
 	
 	return uid_id_map
@@ -378,7 +358,7 @@ def upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_ma
 			'rel_id': rel_uid_id_map[v['rel_uid']],
 			'subject_id': subj_uid_id_map[v['subject_uid']],
 			'action_id': actions_uid_id_map[v['action_uid']],
-			'order': v['order']
+			'direction': v['direction']
 		}
 		
 		id = upsert(models.REL_SUBJECT_ACTION, data)
@@ -679,9 +659,3 @@ def error(msg=''):
 
 def uid():
 	return str(random.random())[2:]
-
-
-def upsert(model, data):
-	# upsert that shit
-	print('Upserting {}: {}'.format(model, data))
-	return 1  # id
