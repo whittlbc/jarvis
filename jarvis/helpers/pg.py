@@ -22,7 +22,8 @@ def insert_one(model, data, cur=None):
 	vals = ', '.join(vals)
 	
 	cur = cur or con.cursor()
-	return cur.execute("INSERT INTO {} ({}) VALUES ({});".format(model, keys, vals))
+	cur.execute("INSERT INTO {} ({}) VALUES ({}) RETURNING id;".format(model, keys, vals))
+	return cur.fetchone()[0]
 
 
 def find_one(model, query, cur=None):
@@ -40,12 +41,14 @@ def upsert(model, data, unique_to=None):
 	query = {k: data[k] for k in unique_to}
 	record = find_one(model, query, cur=cur)
 	
-	if not record:
-		record = insert_one(model, data, cur=cur)
+	if record:
+		id = record['id']
+	else:
+		id = insert_one(model, data, cur=cur)
 	
 	cur.close()
 	
-	return record['id']
+	return id
 	
 	
 def keyify(d, connector=''):
