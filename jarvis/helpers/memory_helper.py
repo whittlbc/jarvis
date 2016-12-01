@@ -1,5 +1,5 @@
 import jarvis.helpers.nlp.stanford_parser as sp
-from jarvis.helpers.nlp.memory_formats import STORAGE_PREDICATE_FORMATS, RESTRICTED_LABELS
+from jarvis.helpers.nlp.memory_formats import STORAGE_PREDICATE_FORMATS, WH_RETRIEVAL_PREDICATE_FORMATS, RESTRICTED_LABELS
 from jarvis.helpers.nlp.lemmatizer import lemmatizer
 from jarvis.helpers.nlp.names import names_map
 from nltk.tree import Tree
@@ -60,6 +60,10 @@ def format_memory(text):
 		modeled_content = format_modeled_content(pred_content)
 	else:
 		modeled_content = format_modeled_content(pred_content[1:])
+
+	print modeled_content
+	
+	return False
 
 	# Models
 	subjects = {}
@@ -555,24 +559,39 @@ def is_yes_no_query(tree, text):
 
 
 def handle_wh_query(tree, q_type):
-	wh_tree, question_tree = tree[0]
+	wh_tree, q_tree = tree[0]
 	wh_info = chop_wh(wh_tree)
 	
 	if not wh_info:
 		return None
 	
-	format, question_content = chop_question(question_tree)
+	if q_type == 'direct':
+		format, q_content = chop_predicate(q_tree)
+		
+		if format not in WH_RETRIEVAL_PREDICATE_FORMATS:
+			return False
+		
+		leading_v_label = [l for sublist in q_content for l in sublist][0].keys()[0]
+		
+		# Action
+		if leading_v_label == 'V*':
+			modeled_content = format_modeled_content(q_content)
+		else:
+			# V(BE) or V(OWN)
+			modeled_content = format_modeled_content(q_content[1:])
 	
-	if format not in WH_RETRIEVAL_PREDICATE_FORMATS:
-		return False
+	elif q_type == 'relative':
+		format, q_content = chop_relative_q(q_tree)
+	else:
+		error('q_type not valid while handling WH mem query: {}'.format(q_type))
 	
-	modeled_question = format_modeled_question(question_content)
-
 
 def handle_yes_no_query(t):
 	return 'Yes'
 	
-	
+
+def chop_relative_q(s):
+	print
 	
 
 ################################

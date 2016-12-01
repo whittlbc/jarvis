@@ -63,7 +63,9 @@ STORAGE_PREDICATE_FORMATS = [
 
 # Allowed tree formats for predicates when retrieving a memory with a 'WH' question
 WH_RETRIEVAL_PREDICATE_FORMATS = [
-	[]
+	[{'VP': ['V*']}],
+	[{'VP': ['V*', 'NP']}],
+	['V*', 'NP', {'VP': ['V*']}],
 ]
 
 # Labels currently restricted when storing memories
