@@ -92,7 +92,6 @@ def format_memory(text):
 			'relation': 1	# change to class constants somewhere
 		}
 	
-	# for each grouping
 	for data in modeled_content:
 		
 		if leading_v_label == 'V*':
@@ -249,8 +248,7 @@ def format_memory(text):
 						'rel_b_uid': outer_subj_rel_uid,
 						'relation': order
 					}
-				
-	
+					
 	# Subjects
 	subj_uid_id_map = upsert_subjects(subjects)
 	
@@ -573,18 +571,204 @@ def handle_wh_query(tree, q_type):
 		
 		leading_v_label = [l for sublist in q_content for l in sublist][0].keys()[0]
 		
-		# Action
-		if leading_v_label == 'V*':
+		if leading_v_label == 'V*':  # Action
 			modeled_content = format_modeled_content(q_content)
-		else:
-			# V(BE) or V(OWN)
+		else:  # V(BE) or V(OWN)
 			modeled_content = format_modeled_content(q_content[1:])
-	
+		
+		return fetch_memory_wh(modeled_content, wh_info, leading_v_label)
+		
 	elif q_type == 'relative':
 		format, q_content = chop_relative_q(q_tree)
 	else:
 		error('q_type not valid while handling WH mem query: {}'.format(q_type))
 	
+
+def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
+	subjects = {}
+	rels = {}
+	rel_subjects = {}
+	rel_rels = {}
+	actions = {}
+	subj_subj_actions = {}
+	rel_subj_actions = {}
+	rel_rel_actions = {}
+	
+	# [
+	# 	{
+	# 		'action': {
+	# 			'v': 'plays',
+	# 			'adj': [],
+	# 			'adv': [],
+	# 			'subject': {
+	# 				'owner': None,
+	# 				'noun': 'basketball',
+	# 				'description': {
+	# 					'adv': [],
+	# 					'adj': []
+	# 				}
+	# 			}
+	# 		}
+	# 	}
+	# ]
+	
+	for data in modeled_content:
+		
+		if leading_v_label == 'V*':
+			
+			# if data.get('subject'):
+			# 	outer_subj = data['subject']
+			#
+			# 	outer_subj_type = 'subj'
+			# 	outer_subj_noun_uid = uid()
+			# 	subjects[outer_subj_noun_uid] = {'orig': outer_subj['noun']}
+			#
+			# 	if outer_subj['owner']:
+			# 		outer_subj_type = 'rel'
+			# 		outer_subj_owner_uid = uid()
+			# 		subjects[outer_subj_owner_uid] = {'orig': outer_subj['owner']}
+			#
+			# 		outer_subj_rel_uid = uid()
+			# 		rels[outer_subj_rel_uid] = {
+			# 			'subj_a_uid': outer_subj_owner_uid,
+			# 			'subj_b_uid': outer_subj_noun_uid,
+			# 			'relation': 1  # change to class constants somewhere
+			# 		}
+			
+			if data.get('action'):
+				a = data['action']
+				action_uid = uid()
+				actions[action_uid] = {'verb': a['v']}
+				
+				action_subj = a['subject']
+				
+				action_subj_type = 'subj'
+				action_subj_noun_uid = uid()
+				subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
+				
+				if action_subj['owner']:
+					action_subj_type = 'rel'
+					action_subj_owner_uid = uid()
+					subjects[action_subj_owner_uid] = {'orig': action_subj['owner']}
+					
+					action_subj_rel_uid = uid()
+					rels[action_subj_rel_uid] = {
+						'subj_a_uid': action_subj_owner_uid,
+						'subj_b_uid': action_subj_noun_uid,
+						'relation': 1  # change to class constants somewhere
+					}
+				
+				if action_subj_type == 'subj':
+					subj_subj_action_uid = uid()
+					subj_subj_actions[subj_subj_action_uid] = {
+						'subj_a_uid': wh_info['wh'],
+						'subj_b_uid': action_subj_noun_uid,
+						'action_uid': action_uid
+					}
+				else:
+					rel_subj_action_uid = uid()
+					rel_subj_actions[rel_subj_action_uid] = {
+						'rel_uid': action_subj_rel_uid,
+						'subject_uid': wh_info['wh'],
+						'action_uid': action_uid,
+						'direction': -1
+					}
+		
+		else: # eq relation queries and and description queries
+			print
+			# if data.get('subject'):
+			# 	outer_subj = data['subject']
+			#
+			# 	outer_subj_type = 'subj'
+			# 	outer_subj_noun_uid = uid()
+			# 	subjects[outer_subj_noun_uid] = {'orig': outer_subj['noun']}
+			#
+			# 	if outer_subj['owner']:
+			# 		outer_subj_type = 'rel'
+			# 		outer_subj_owner_uid = uid()
+			# 		subjects[outer_subj_owner_uid] = {'orig': outer_subj['owner']}
+			#
+			# 		outer_subj_rel_uid = uid()
+			# 		rels[outer_subj_rel_uid] = {
+			# 			'subj_a_uid': outer_subj_owner_uid,
+			# 			'subj_b_uid': outer_subj_noun_uid,
+			# 			'relation': 1  # change to class constants somewhere
+			# 		}
+			#
+			# 	if lead_subj_type == 'subj' and outer_subj_type == 'subj':
+			# 		rel_uid = uid()
+			#
+			# 		if leading_v_label == 'V(BE)':
+			# 			order = 0
+			# 		else:
+			# 			order = 1
+			#
+			# 		rels[rel_uid] = {
+			# 			'subj_a_uid': lead_subj_noun_uid,
+			# 			'subj_b_uid': outer_subj_noun_uid,
+			# 			'relation': order
+			# 		}
+			#
+			# 	elif lead_subj_type == 'rel' and outer_subj_type == 'subj':
+			# 		rel_subj_uid = uid()
+			#
+			# 		if leading_v_label == 'V(BE)':
+			# 			order = 0
+			# 		else:
+			# 			order = 1
+			#
+			# 		rel_subjects[rel_subj_uid] = {
+			# 			'rel_uid': lead_subj_rel_uid,
+			# 			'subject_uid': outer_subj_noun_uid,
+			# 			'relation': order
+			# 		}
+			#
+			# 	elif lead_subj_type == 'subj' and outer_subj_type == 'rel':
+			# 		rel_subj_uid = uid()
+			#
+			# 		if leading_v_label == 'V(BE)':
+			# 			order = 0
+			# 		else:
+			# 			order = -1
+			#
+			# 		rel_subjects[rel_subj_uid] = {
+			# 			'rel_uid': outer_subj_rel_uid,
+			# 			'subject_uid': lead_subj_noun_uid,
+			# 			'relation': order
+			# 		}
+			#
+			# 	else:
+			# 		rel_rel_uid = uid()
+			#
+			# 		if leading_v_label == 'V(BE)':
+			# 			order = 0
+			# 		else:
+			# 			order = 1
+			#
+			# 		rel_rels[rel_rel_uid] = {
+			# 			'rel_a_uid': lead_subj_rel_uid,
+			# 			'rel_b_uid': outer_subj_rel_uid,
+			# 			'relation': order
+			# 		}
+	
+	# The order below will be the order you generate your select statements in. Replace upsert_X with subject_query_gen
+	# Still need to figure out what to do if something doesn't exist along the way...
+	
+	# # Subjects
+	# subj_uid_id_map = upsert_subjects(subjects)
+	#
+	# # Rels
+	# rel_uid_id_map = upsert_rels(rels, subj_uid_id_map)
+	# rel_subj_uid_id_map = upsert_rel_subjects(rel_subjects, subj_uid_id_map, rel_uid_id_map)
+	# rel_rel_uid_id_map = upsert_rel_rels(rel_rels, rel_uid_id_map)
+	#
+	# # Actions
+	# actions_uid_id_map = upsert_actions(actions)
+	# subj_subj_actions_uid_id_map = upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_map)
+	# rel_subj_actions_uid_id_map = upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map,
+	# 																											rel_uid_id_map)
+	# rel_rel_actions_uid_id_map = upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
+
 
 def handle_yes_no_query(t):
 	return 'Yes'
