@@ -1,5 +1,5 @@
 import jarvis.helpers.nlp.stanford_parser as sp
-from jarvis.helpers.nlp.memory_formats import PREDICATE_FORMATS, RESTRICTED_LABELS
+from jarvis.helpers.nlp.memory_formats import STORAGE_PREDICATE_FORMATS, RESTRICTED_LABELS
 from jarvis.helpers.nlp.lemmatizer import lemmatizer
 from jarvis.helpers.nlp.names import names_map
 from nltk.tree import Tree
@@ -40,7 +40,7 @@ def format_memory(text):
 		if not v(tree): 
 			return False
 
-	subj_tree, pred_tree = tree[0][0], tree[0][1]
+	subj_tree, pred_tree = tree[0]
 	
 	subject = chop_np(subj_tree)
 	
@@ -50,7 +50,7 @@ def format_memory(text):
 	# chop_predicate should call the reduce_predicate method
 	format, pred_content = chop_predicate(pred_tree)
 	
-	if format not in PREDICATE_FORMATS:
+	if format not in STORAGE_PREDICATE_FORMATS:
 		return False
 	
 	leading_v_label = pred_content[0].keys()[0]
@@ -440,67 +440,6 @@ def valid_storage_format(t):
 		and len(t[0]) == 2 \
 		and t[0][0].label() == phrases.NOUN_PHRASE \
 		and t[0][1].label() == phrases.VERB_PHRASE
-
-
-# Need to format a response into some when/where/with style structure
-def chop_pp(pp):
-	return {}
-
-
-def chop_np(np):
-	if not valid_np_children(np):
-		return None
-	
-	subject = {'noun': None, 'owner': None}
-	adjs, advs = [], []
-		
-	groups = labeled_leaves(np)
-	
-	i = 0
-	for g in groups:
-		label, word = g
-		
-		if not subject['noun'] and label in nouns:
-			subject['noun'] = word
-		elif label in adjectives:
-			adjs.append(word)
-		elif label in adverbs:
-			advs.append(word)
-		
-		if label == words.POSSESSIVE_PRONOUN:
-			subject['owner'] = word
-			subject['noun'] = None
-		elif label == words.POSSESSIVE_ENDING and i > 0:
-			subject['owner'] = groups[i - 1][1]
-			subject['noun'] = None
-			
-		i += 1
-	
-	if not subject['noun']:
-		return None
-	
-	data = {
-		'noun': subject['noun'],
-		'owner': None,
-		'description': {
-			'adj': adjs,
-			'adv': advs
-		}
-	}
-	
-	# if possession exists
-	if subject['owner']:
-		data['owner'] = corrected_owner(subject['owner'])
-		
-	return data
-
-
-# TODO: Add a correction for 'your' that maps to the bot's name
-def corrected_owner(owner):
-	if owner.lower() in ['my', 'our']:
-		return 'I'
-	else:
-		return owner
 	
 	
 def chop_predicate(tree):
@@ -573,6 +512,7 @@ def get_verb_tag(verb):
 ################################
 
 def query_memory(text):
+	answer = None
 	text = strip_trailing_punc(text)
 	
 	# Replace leading 'do' with 'did' --> TODO: change to regex
@@ -580,25 +520,29 @@ def query_memory(text):
 		text = ' '.join(['Did'] + text.split()[1:])
 	
 	tree = to_tree(text)
-
-	if not valid_labels(tree):
-		return None
 	
-	if not valid_query_format(tree, text):
-		return None
+	if is_direct_wh_query(tree):
+		answer = handle_wh_query(tree, 'direct')
+	elif is_relative_wh_query(tree):
+		answer = handle_wh_query(tree, 'relative')
+	elif is_yes_no_query(tree, text):
+		answer = handle_yes_no_query(tree)
 	
-	return 'Answer'
+	return answer
 
 
-def valid_query_format(tree, text):
-	return is_wh_query(tree) or is_yes_no_query(tree, text)
-
-
-def is_wh_query(t):
+def is_direct_wh_query(t):
 	return t[0].label() == clauses.DIRECT_WH_QUESTION \
 		and len(t[0]) == 2 \
 		and t[0][0].label() in [phrases.WH_NOUN_PHRASE, phrases.WH_ADV_PHRASE] \
 		and t[0][1].label() == clauses.INVERTED_YES_NO
+	
+
+def is_relative_wh_query(t):
+	return t[0].label() == clauses.RELATIVE_CLAUSE \
+		and len(t[0]) == 2 \
+		and t[0][0].label() == phrases.WH_NOUN_PHRASE \
+		and t[0][1].label() == clauses.DECLARATION
 
 
 def is_yes_no_query(tree, text):
@@ -610,9 +554,130 @@ def is_yes_no_query(tree, text):
 		and len(tree[0]) in [2, 3]
 
 
+def handle_wh_query(tree, q_type):
+	wh_tree, question_tree = tree[0]
+	wh_info = chop_wh(wh_tree)
+	
+	if not wh_info:
+		return None
+	
+	format, question_content = chop_question(question_tree)
+	
+	if format not in WH_RETRIEVAL_PREDICATE_FORMATS:
+		return False
+	
+	modeled_question = format_modeled_question(question_content)
+
+
+def handle_yes_no_query(t):
+	return 'Yes'
+	
+	
+	
+
 ################################
 # HELPERS
 ################################
+
+# Need to format a response into some when/where/with style structure
+def chop_pp(pp):
+	return {}
+
+
+def chop_np(np):
+	if not valid_np_children(np):
+		return None
+	
+	subject = {'noun': None, 'owner': None}
+	adjs, advs = [], []
+	
+	groups = labeled_leaves(np)
+	
+	i = 0
+	for g in groups:
+		label, word = g
+		
+		if not subject['noun'] and label in nouns:
+			subject['noun'] = word
+		elif label in adjectives:
+			adjs.append(word)
+		elif label in adverbs:
+			advs.append(word)
+		
+		if label == words.POSSESSIVE_PRONOUN:
+			subject['owner'] = word
+			subject['noun'] = None
+		elif label == words.POSSESSIVE_ENDING and i > 0:
+			subject['owner'] = groups[i - 1][1]
+			subject['noun'] = None
+		
+		i += 1
+	
+	if not subject['noun']:
+		return None
+	
+	data = {
+		'noun': subject['noun'],
+		'owner': None,
+		'description': {
+			'adj': adjs,
+			'adv': advs
+		}
+	}
+	
+	# if possession exists
+	if subject['owner']:
+		data['owner'] = corrected_owner(subject['owner'])
+	
+	return data
+
+
+def chop_wh(wh_tree):
+	info = {
+		'wh': None,
+		'subject': None
+	}
+	
+	if not valid_wh_children(wh_tree):
+		return None
+	
+	if len(wh_tree) == 1:
+		info['wh'] = wh_tree[0][0].lower()
+	else:
+		feaux_chopped_np = {}
+		
+		for child in wh_tree:
+			label = child.label()
+			
+			if label == phrases.NOUN_PHRASE and not info['subject']:
+				info['subject'] = chop_np(child)
+			elif label in [words.NOUN_SINGULAR, words.NOUN_PLURAL] and not feaux_chopped_np.get('noun'):
+				feaux_chopped_np['noun'] = child[0]
+			elif label in [words.WH_PRONOUN, words.WH_DETERMINER, words.POSSESSIVE_WH_PRONOUN] and not info['wh']:
+				info['wh'] = child[0].lower()
+		
+		if not info['subject'] and feaux_chopped_np:
+			feaux_chopped_np['description'] = {
+				'adj': [g[1] for g in labeled_leaves(wh_tree) if g[0] in adjectives],
+				'adv': []
+			}
+			
+			feaux_chopped_np['owner'] = None
+			info['subject'] = feaux_chopped_np
+	
+	if info['wh'] == 'whose':
+		info['wh'] = 'who'
+	
+	return info
+
+
+# TODO: Add a correction for 'your' that maps to the bot's name
+def corrected_owner(owner):
+	if owner.lower() in ['my', 'our']:
+		return 'I'
+	else:
+		return owner
+
 
 def valid_labels(tree):
 	for label in [l[0] for l in labeled_leaves(tree)]:
@@ -666,6 +731,36 @@ def valid_np_children(np):
 		if l not in valid_child_labels:
 			return False
 		
+	return True
+
+
+def valid_wh_children(wh_tree):
+	label = wh_tree.label()
+	
+	if label == phrases.WH_ADV_PHRASE:
+		valid_child_labels = set([
+			words.WH_ADVERB
+		])
+	elif label == phrases.WH_NOUN_PHRASE:
+		valid_child_labels = set([
+			words.WH_PRONOUN,
+			words.WH_DETERMINER,
+			words.POSSESSIVE_WH_PRONOUN,
+			phrases.ADJ_PHRASE,
+			words.ADJ,
+			words.ADJ_COMPARATIVE,
+			words.ADJ_SUPERLATIVE,
+			words.NOUN_SINGULAR,
+			words.NOUN_PLURAL,
+			phrases.NOUN_PHRASE
+		])
+	else:
+		error('WH Tree Label ({}) not valid for mem query.'.format(label))
+	
+	for l in all_nested_labels(wh_tree):
+		if l not in valid_child_labels:
+			return False
+	
 	return True
 	
 

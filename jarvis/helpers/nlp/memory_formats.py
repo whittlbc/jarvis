@@ -1,8 +1,8 @@
 import jarvis.helpers.nlp.stanford_parser as sp
 words = sp.words
 
-# Tree Formats currently allowed when storing memories
-PREDICATE_FORMATS = [
+# Allowed tree formats for predicates when storing memories
+STORAGE_PREDICATE_FORMATS = [
 	['V(BE)'],
 	['V(BE)', 'NP'],
 	['V(BE)', 'PP'],
@@ -58,6 +58,12 @@ PREDICATE_FORMATS = [
 	['MD', {'VP': ['V*', {'S': [{'VP': ['TO', {'VP': ['V*', {'VP': ['V*', 'PP']}]}]}]}]}],
 	['MD', {'VP': ['V*', {'S': [{'VP': ['TO', {'VP': ['V*', {'VP': ['V*', 'PP', 'NP']}]}]}]}]}],
 	['MD', {'VP': ['V*', {'S': [{'VP': ['TO', {'VP': ['V*', {'VP': ['V*', 'NP', 'PP']}]}]}]}]}]
+]
+
+
+# Allowed tree formats for predicates when retrieving a memory with a 'WH' question
+WH_RETRIEVAL_PREDICATE_FORMATS = [
+	[]
 ]
 
 # Labels currently restricted when storing memories
