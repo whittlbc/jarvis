@@ -70,3 +70,27 @@ def perspective_swap(text):
 
 def to_slug(text):
 	return slugify(text, to_lower=True, separator='_')
+
+
+def corrected_owner(owner, from_bot_perspec=True):
+	if from_bot_perspec and owner.lower() in ['i']:
+		return 'you'
+	elif not from_bot_perspec and owner.lower() in ['my', 'our']:
+		return 'I'
+	else:
+		return owner
+
+
+def and_join(l, correct_owner=True, from_bot_perspec=True):
+	if correct_owner:
+		l = [corrected_owner(s, from_bot_perspec=from_bot_perspec) for s in l]
+	
+	if len(l) == 0:
+		return ''
+	elif len(l) == 1:
+		return l[0]
+	elif len(l) == 2:
+		return ' and '.join(l)
+	else:
+		last_entry = l.pop()
+		return ', and '.join([', '.join(l), last_entry])

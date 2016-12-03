@@ -2,11 +2,12 @@ import jarvis.helpers.nlp.stanford_parser as sp
 from jarvis.helpers.nlp.memory_formats import STORAGE_PREDICATE_FORMATS, WH_RETRIEVAL_PREDICATE_FORMATS, RESTRICTED_LABELS
 from jarvis.helpers.nlp.lemmatizer import lemmatizer
 from jarvis.helpers.nlp.names import names_map
+from jarvis.helpers.helpers import corrected_owner, and_join
 from nltk.tree import Tree
 from jarvis import logger
 from numpy import random
 from jarvis.helpers.models import Models
-from jarvis.helpers.pg import upsert
+from jarvis.helpers.pg import upsert, keyify, find
 
 # Configured instance of the Stanford Parser
 parser = sp.parser()
@@ -324,7 +325,6 @@ def upsert_rel_rels(rel_rels, rel_uid_id_map):
 		}
 		
 		id = upsert(models.REL_REL, data)
-		uid_id_map[k] = id
 	
 	return uid_id_map
 
@@ -593,25 +593,7 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	subj_subj_actions = {}
 	rel_subj_actions = {}
 	rel_rel_actions = {}
-	
-	# [
-	# 	{
-	# 		'action': {
-	# 			'v': 'plays',
-	# 			'adj': [],
-	# 			'adv': [],
-	# 			'subject': {
-	# 				'owner': None,
-	# 				'noun': 'basketball',
-	# 				'description': {
-	# 					'adv': [],
-	# 					'adj': []
-	# 				}
-	# 			}
-	# 		}
-	# 	}
-	# ]
-	
+		
 	for data in modeled_content:
 		
 		if leading_v_label == 'V*':
@@ -754,22 +736,90 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	# The order below will be the order you generate your select statements in. Replace upsert_X with subject_query_gen
 	# Still need to figure out what to do if something doesn't exist along the way...
 	
-	# # Subjects
-	# subj_uid_id_map = upsert_subjects(subjects)
-	#
-	# # Rels
-	# rel_uid_id_map = upsert_rels(rels, subj_uid_id_map)
-	# rel_subj_uid_id_map = upsert_rel_subjects(rel_subjects, subj_uid_id_map, rel_uid_id_map)
-	# rel_rel_uid_id_map = upsert_rel_rels(rel_rels, rel_uid_id_map)
-	#
-	# # Actions
-	# actions_uid_id_map = upsert_actions(actions)
-	# subj_subj_actions_uid_id_map = upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_map)
-	# rel_subj_actions_uid_id_map = upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map,
-	# 																											rel_uid_id_map)
-	# rel_rel_actions_uid_id_map = upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
+	# Subjects
+	subj_uid_query_map = subject_query_map(subjects)
+	
+	# Rels
+	# rel_uid_query_map = upsert_rels(rels, subj_uid_query_map)
+	# rel_subj_uid_query_map = upsert_rel_subjects(rel_subjects, subj_uid_query_map, rel_uid_query_map)
+
+	# Actions
+	actions_uid_query_map = action_query_map(actions)
+	
+	if subj_subj_actions:
+		result = find_models_through_ssa(subj_subj_actions.values()[0], actions_uid_query_map, subj_uid_query_map)
+	elif rel_subj_actions:
+		result = find_missing_model_from_rsa(rel_subj_actions.values()[0], actions_uid_query_map, subj_uid_query_map, rel_uid_query_map)
+		
+	return and_join(result)
 
 
+def select_where(model, returning='*'):
+	return 'SELECT {} FROM {} WHERE'.format(returning, model)
+
+
+def subject_query_map(subjects):
+	uid_query_map = {}
+	query = select_where(models.SUBJECT, returning='id')
+	
+	for k, v in subjects.items():
+		data = {
+			'lower': v['orig'].lower()
+		}
+		
+		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+	
+	return uid_query_map
+
+
+def action_query_map(actions):
+	uid_query_map = {}
+	query = select_where(models.ACTION, returning='id')
+	
+	for k, v in actions.items():
+		data = {
+			'verb': lemmatize(v['verb'].lower(), pos='v')
+		}
+		
+		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+	
+	return uid_query_map
+
+
+def find_models_through_ssa(ssa_info, actions_uid_query_map, subj_uid_query_map):
+	query_keys_map = {
+		'a_id': [subj_uid_query_map, 'subj_a_uid', models.SUBJECT],
+		'b_id': [subj_uid_query_map, 'subj_b_uid', models.SUBJECT],
+		'action_id': [actions_uid_query_map, 'action_uid', models.ACTION]
+	}
+		
+	data = {}
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = ssa_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			ssa_return_col = key
+			wh = val
+			query_model = model
+
+	
+	ssa_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning=ssa_return_col)
+	ssa_query = '{} {}'.format(ssa_query_prefix, keyify(data, connector=' AND '))
+
+	if query_model == models.SUBJECT:
+		return_col = 'orig'
+	else:
+		return_col = 'verb'
+		
+	results = find(query_model, {'id': '({})'.format(ssa_query)}, returning=return_col)
+	
+	return [r[0] for r in results]
+	
 def handle_yes_no_query(t):
 	return 'Yes'
 	
@@ -830,7 +880,7 @@ def chop_np(np):
 	
 	# if possession exists
 	if subject['owner']:
-		data['owner'] = corrected_owner(subject['owner'])
+		data['owner'] = corrected_owner(subject['owner'], from_bot_perspec=False)
 	
 	return data
 
@@ -872,14 +922,6 @@ def chop_wh(wh_tree):
 		info['wh'] = 'who'
 	
 	return info
-
-
-# TODO: Add a correction for 'your' that maps to the bot's name
-def corrected_owner(owner):
-	if owner.lower() in ['my', 'our']:
-		return 'I'
-	else:
-		return owner
 
 
 def valid_labels(tree):

@@ -39,6 +39,14 @@ def find_one(model, query, cur=None):
 	return cur.fetchone()
 		
 
+def find(model, query, returning='*', cur=None):
+	formatted_query = keyify(query, connector=' AND ')
+	
+	cur = cur or cursor()
+	cur.execute("SELECT {} FROM {} WHERE {};".format(returning, model, formatted_query))
+	return cur.fetchall()
+
+
 def upsert(model, data, unique_to=None):
 	cur = cursor()
 	unique_to = unique_to or data.keys()
@@ -61,7 +69,7 @@ def keyify(d, connector=''):
 	groups = []
 	
 	for k, v in d.items():
-		if isinstance(v, basestring):
+		if isinstance(v, basestring) and v[0] != '(':
 			v = "'{}'".format(v)
 		else:
 			v = str(v)
