@@ -14,7 +14,7 @@ def perform():
 	model = GridSearchCV(pipeline(), gs_clf_params(), n_jobs=-1)
 	
 	# Get your training and testing sets of data with 50/50 split
-	(train_data, train_targets), (test_data, test_targets) = dp.get_data()
+	(train_data, train_targets), (test_data, test_targets) = dp.geft_data()
 	
 	# Train your model
 	model = model.fit(train_data, train_targets)
@@ -33,7 +33,7 @@ def pipeline():
 	return Pipeline([
 		('vect', CountVectorizer()),
 		('tfidf', TfidfTransformer()),
-		('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=5, shuffle=True)),
+		('clf', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=5, shuffle=True))
 	])
 	
 

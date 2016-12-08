@@ -2,7 +2,7 @@ import jarvis.helpers.nlp.stanford_parser as sp
 from jarvis.helpers.nlp.memory_formats import STORAGE_PREDICATE_FORMATS, WH_RETRIEVAL_PREDICATE_FORMATS, RESTRICTED_LABELS
 from jarvis.helpers.nlp.lemmatizer import lemmatizer
 from jarvis.helpers.nlp.names import names_map
-from jarvis.helpers.helpers import corrected_owner, and_join
+from jarvis.helpers.helpers import corrected_owner, format_possession, and_join
 from nltk.tree import Tree
 from jarvis import logger
 from numpy import random
@@ -637,7 +637,7 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					rels[action_subj_rel_uid] = {
 						'subj_a_uid': action_subj_owner_uid,
 						'subj_b_uid': action_subj_noun_uid,
-						'relation': 1  # change to class constants somewhere
+							'relation': 1  # change to class constants somewhere
 					}
 				
 				if action_subj_type == 'subj':
@@ -732,25 +732,84 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 			# 			'rel_b_uid': outer_subj_rel_uid,
 			# 			'relation': order
 			# 		}
-	
-	# The order below will be the order you generate your select statements in. Replace upsert_X with subject_query_gen
-	# Still need to figure out what to do if something doesn't exist along the way...
-	
-	# Subjects
-	subj_uid_query_map = subject_query_map(subjects)
-	
-	# Rels
-	# rel_uid_query_map = upsert_rels(rels, subj_uid_query_map)
-	# rel_subj_uid_query_map = upsert_rel_subjects(rel_subjects, subj_uid_query_map, rel_uid_query_map)
 
-	# Actions
-	actions_uid_query_map = action_query_map(actions)
-	
-	if subj_subj_actions:
-		result = find_models_through_ssa(subj_subj_actions.values()[0], actions_uid_query_map, subj_uid_query_map)
-	elif rel_subj_actions:
-		result = find_missing_model_from_rsa(rel_subj_actions.values()[0], actions_uid_query_map, subj_uid_query_map, rel_uid_query_map)
+	result = []
+
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
 		
+	if actions:
+		actions_uid_query_map = action_query_map(actions)
+		
+		if action_subj_type == 'subj':
+			# (1) query SubjectSubjectActions to find subjects by a_id
+			# (2) query RelSubjectActions where direction=1 to find possessive rels
+				
+			# Since action_subj_type = 'subj', subj_subj_actions must exist since this is a query
+			ss_uid_info = subj_subj_actions.values()[0]
+			wh = ss_uid_info['subj_a_uid']  # we know this is the WH word since A is the unknown
+			rs_uid_info = {
+				'rel_uid': wh,
+				'subject_uid': ss_uid_info['subj_b_uid'],
+				'action_uid': ss_uid_info['action_uid']
+			}
+			
+			# (1)
+			ssa_results = find_models_through_ssa(
+				ss_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map
+			)
+		
+			# (2)
+			rsa_results = find_models_through_rsa(
+				rs_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=1,	# We know it's 1 since rel is the unknown
+			)
+			
+			result += [corrected_owner(r) for r in ssa_results]
+			
+			for group in rsa_results['rels']:
+				result.append(format_possession([corrected_owner(g) for g in group]))
+		else:
+			# (1) query RelRelActions to find rels by a_id
+			# (2) query RelSubjectActions where direction=-1 to find possessive rels
+			
+			# Since action_subj_type = 'rel', rel_subj_actions must exist since this is a query
+			rs_uid_info = rel_subj_actions.values()[0]
+			wh = rs_uid_info['subject_uid']  # we know this is the WH word since A is the unknown
+			rr_uid_info = {
+				'rel_a_uid': wh,
+				'rel_b_uid': rs_uid_info['rel_uid'],
+				'action_uid': rs_uid_info['action_uid']
+			}
+			
+			# (1)
+			rsa_results = find_models_through_rsa(
+				rs_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=-1,  # We know it's 1 since rel is the unknown
+			)
+			
+			# (2)
+			rra_results = find_models_through_rra(
+				rr_uid_info,
+				actions_uid_query_map,
+				rel_uid_query_map
+			)
+						
+			for group in rsa_results['rels'] + rra_results:
+				result.append(format_possession([corrected_owner(g) for g in group]))
+	else:
+		# Do something with these rel_subjects if they exist
+		# rel_subj_uid_query_map = upsert_rel_subjects(rel_subjects, subj_uid_query_map, rel_uid_query_map)
+		print
+	
 	return and_join(result)
 
 
@@ -766,6 +825,32 @@ def subject_query_map(subjects):
 		data = {
 			'lower': v['orig'].lower()
 		}
+		
+		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+	
+	return uid_query_map
+
+
+def rel_query_map(rels, subj_uid_query_map):
+	uid_query_map = {}
+	query = select_where(models.REL, returning='id')
+
+	keys_map = {
+		'a_id': 'subj_a_uid',
+		'b_id': 'subj_b_uid'
+	}
+	
+	for k, v in rels.items():
+		data = {
+			'relation': v['relation']
+		}
+		
+		for key, val in keys_map.items():
+			if subj_uid_query_map.get(v[val]):
+				data[key] = subj_uid_query_map.get(v[val])
+			else:
+				# Deal with direct-rel queries later
+				print
 		
 		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
 	
@@ -820,6 +905,91 @@ def find_models_through_ssa(ssa_info, actions_uid_query_map, subj_uid_query_map)
 	
 	return [r[0] for r in results]
 	
+
+def find_models_through_rsa(rsa_info, actions_uid_query_map, subj_uid_query_map, rel_uid_query_map, dir=None):
+	query_keys_map = {
+		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL],
+		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT],
+		'action_id': [actions_uid_query_map, 'action_uid', models.ACTION]
+	}
+	
+	data = {}
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rsa_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			rsa_return_col = key
+			wh = val
+			query_model = model
+			
+	if dir:
+		data['direction'] = dir
+	
+	rsa_query_prefix = select_where(models.REL_SUBJECT_ACTION, returning=rsa_return_col)
+	rsa_query = '{} {}'.format(rsa_query_prefix, keyify(data, connector=' AND '))
+		
+	results = {
+		'subjects': [],
+		'rels': []
+	}
+		
+	if query_model == models.SUBJECT:
+		results['subjects'] = [r[0] for r in find(query_model, {'id': '({})'.format(rsa_query)}, returning='orig')]
+	else:
+		# models.REL
+		rels = find(query_model, {'id': '({})'.format(rsa_query), 'relation': 1})
+		rel_results = []
+								
+		if rels:
+			for r in rels:
+				subject_ids = (r[1], r[2])
+				rel_results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
+		
+		results['rels'] = rel_results
+	
+	return results
+
+
+def find_models_through_rra(rra_info, actions_uid_query_map, rel_uid_query_map):
+	query_keys_map = {
+		'a_id': [rel_uid_query_map, 'rel_a_uid', models.REL],
+		'b_id': [rel_uid_query_map, 'rel_b_uid', models.REL],
+		'action_id': [actions_uid_query_map, 'action_uid', models.ACTION]
+	}
+		
+	data = {}
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rsa_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			rra_return_col = key
+			wh = val
+			query_model = model
+	
+	rra_query_prefix = select_where(models.REL_REL_ACTION, returning=rra_return_col)
+	rra_query = '{} {}'.format(rra_query_prefix, keyify(data, connector=' AND '))
+	
+	rels = find(query_model, {'id': '({})'.format(rra_query), 'relation': 1})
+	results = []
+	
+	if rels:
+		for r in rels:
+			subject_ids = (r[1], r[2])
+			results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
+		
+	return results
+
+
 def handle_yes_no_query(t):
 	return 'Yes'
 	
