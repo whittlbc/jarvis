@@ -596,34 +596,15 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 		
 	for data in modeled_content:
 		
-		if leading_v_label == 'V*':
+		if leading_v_label == 'V*':  # ACTION
+			a = data['action']
+			action_uid = uid()
+			actions[action_uid] = {'verb': a['v']}
 			
-			# if data.get('subject'):
-			# 	outer_subj = data['subject']
-			#
-			# 	outer_subj_type = 'subj'
-			# 	outer_subj_noun_uid = uid()
-			# 	subjects[outer_subj_noun_uid] = {'orig': outer_subj['noun']}
-			#
-			# 	if outer_subj['owner']:
-			# 		outer_subj_type = 'rel'
-			# 		outer_subj_owner_uid = uid()
-			# 		subjects[outer_subj_owner_uid] = {'orig': outer_subj['owner']}
-			#
-			# 		outer_subj_rel_uid = uid()
-			# 		rels[outer_subj_rel_uid] = {
-			# 			'subj_a_uid': outer_subj_owner_uid,
-			# 			'subj_b_uid': outer_subj_noun_uid,
-			# 			'relation': 1  # change to class constants somewhere
-			# 		}
+			action_subj = a.get('subject')
+			action_subj_type = None
 			
-			if data.get('action'):
-				a = data['action']
-				action_uid = uid()
-				actions[action_uid] = {'verb': a['v']}
-				
-				action_subj = a['subject']
-				
+			if action_subj:
 				action_subj_type = 'subj'
 				action_subj_noun_uid = uid()
 				subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
@@ -637,7 +618,7 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					rels[action_subj_rel_uid] = {
 						'subj_a_uid': action_subj_owner_uid,
 						'subj_b_uid': action_subj_noun_uid,
-							'relation': 1  # change to class constants somewhere
+						'relation': 1  # change to class constants somewhere
 					}
 				
 				if action_subj_type == 'subj':
@@ -741,9 +722,8 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	if actions:
 		actions_uid_query_map = action_query_map(actions)
 		
-		if action_subj_type == 'subj':
-			# (1) query SubjectSubjectActions to find subjects by a_id
-			# (2) query RelSubjectActions where direction=1 to find possessive rels
+		if action_subj_type == 'subj':  # Ex: Who plays basketball?
+			# query SubjectSubjectActions and RelSubjectActions
 				
 			# Since action_subj_type = 'subj', subj_subj_actions must exist since this is a query
 			ss_uid_info = subj_subj_actions.values()[0]
@@ -754,14 +734,12 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				'action_uid': ss_uid_info['action_uid']
 			}
 			
-			# (1)
 			ssa_results = find_models_through_ssa(
 				ss_uid_info,
 				actions_uid_query_map,
 				subj_uid_query_map
 			)
 		
-			# (2)
 			rsa_results = find_models_through_rsa(
 				rs_uid_info,
 				actions_uid_query_map,
@@ -774,9 +752,9 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 			
 			for group in rsa_results['rels']:
 				result.append(format_possession([corrected_owner(g) for g in group]))
-		else:
-			# (1) query RelRelActions to find rels by a_id
-			# (2) query RelSubjectActions where direction=-1 to find possessive rels
+		
+		elif action_subj_type == 'rel':  # Ex: Who played my game?
+			# query RelRelActions and RelSubjectActions
 			
 			# Since action_subj_type = 'rel', rel_subj_actions must exist since this is a query
 			rs_uid_info = rel_subj_actions.values()[0]
@@ -787,7 +765,6 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				'action_uid': rs_uid_info['action_uid']
 			}
 			
-			# (1)
 			rsa_results = find_models_through_rsa(
 				rs_uid_info,
 				actions_uid_query_map,
@@ -796,7 +773,6 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				dir=-1,  # We know it's 1 since rel is the unknown
 			)
 			
-			# (2)
 			rra_results = find_models_through_rra(
 				rr_uid_info,
 				actions_uid_query_map,
@@ -805,7 +781,71 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 						
 			for group in rsa_results['rels'] + rra_results:
 				result.append(format_possession([corrected_owner(g) for g in group]))
+				
+		else:  # Ex: Who played?
+			# query SubjectSubjectAction, RelSubjectAction, RelRelAction
+			
+			action_uid = actions_uid_query_map.keys()[0]
+			
+			ss_uid_info = {
+				'subj_a_uid': wh_info['wh'],
+				'subj_b_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			rs_uid_info_forward = {
+				'rel_uid': wh_info['wh'],
+				'subject_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			rs_uid_info_backward = {
+				'rel_uid': '*',
+				'subject_uid': wh_info['wh'],
+				'action_uid': action_uid
+			}
+			
+			rr_uid_info = {
+				'rel_a_uid': wh_info['wh'],
+				'rel_b_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			ssa_results = find_models_through_ssa(
+				ss_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map
+			)
+			
+			rsa_results_forward = find_models_through_rsa(
+				rs_uid_info_forward,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=1,
+			)
+			
+			rsa_results_backward = find_models_through_rsa(
+				rs_uid_info_backward,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=-1,
+			)
+			
+			rra_results = find_models_through_rra(
+				rr_uid_info,
+				actions_uid_query_map,
+				rel_uid_query_map
+			)
+	
+			result += [corrected_owner(r) for r in ssa_results]
+			
+			for group in rsa_results_forward['rels'] + rsa_results_backward['rels'] + rra_results:
+				result.append(format_possession([corrected_owner(g) for g in group]))
+	
 	else:
+		# Will have to do with fetching EQ rels and and descriptions
 		# Do something with these rel_subjects if they exist
 		# rel_subj_uid_query_map = upsert_rel_subjects(rel_subjects, subj_uid_query_map, rel_uid_query_map)
 		print
@@ -888,9 +928,10 @@ def find_models_through_ssa(ssa_info, actions_uid_query_map, subj_uid_query_map)
 		if mini_query:
 			data[key] = '({})'.format(mini_query)
 		else:
-			ssa_return_col = key
-			wh = val
-			query_model = model
+			if val != '*':
+				ssa_return_col = key
+				wh = val
+				query_model = model
 
 	
 	ssa_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning=ssa_return_col)
@@ -923,9 +964,10 @@ def find_models_through_rsa(rsa_info, actions_uid_query_map, subj_uid_query_map,
 		if mini_query:
 			data[key] = '({})'.format(mini_query)
 		else:
-			rsa_return_col = key
-			wh = val
-			query_model = model
+			if val != '*':
+				rsa_return_col = key
+				wh = val
+				query_model = model
 			
 	if dir:
 		data['direction'] = dir
@@ -966,15 +1008,16 @@ def find_models_through_rra(rra_info, actions_uid_query_map, rel_uid_query_map):
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
-		val = rsa_info[uid]
+		val = rra_info[uid]
 		mini_query = m.get(val)
 		
 		if mini_query:
 			data[key] = '({})'.format(mini_query)
 		else:
-			rra_return_col = key
-			wh = val
-			query_model = model
+			if val != '*':
+				rra_return_col = key
+				wh = val
+				query_model = model
 	
 	rra_query_prefix = select_where(models.REL_REL_ACTION, returning=rra_return_col)
 	rra_query = '{} {}'.format(rra_query_prefix, keyify(data, connector=' AND '))
