@@ -389,9 +389,11 @@ def upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map):
 
 	
 def format_modeled_content(data):
+	# TODO: Figure out what to do with V(DO) instances
+
 	modeled_data = []
 	content = {}
-		
+		 
 	for child in data:
 		if isinstance(child, list):
 			modeled_data.extend(format_modeled_content(child))
@@ -565,10 +567,13 @@ def handle_wh_query(tree, q_type):
 		if format not in WH_RETRIEVAL_PREDICATE_FORMATS:
 			return False
 		
-		leading_v_label = [l for sublist in q_content for l in sublist][0].keys()[0]
+		leading_v_label, leading_v_word = lead_v(q_content)
 		
 		if leading_v_label == 'V*':  # Action
-			modeled_content = format_modeled_content(q_content)
+			if lemmatize(leading_v_word, pos='v') == 'do':
+				return fetch_wh_do(q_content[1:], wh_info)
+			else:
+				modeled_content = format_modeled_content(q_content)
 		else:  # V(BE) or V(OWN)
 			modeled_content = format_modeled_content(q_content[1:])
 		
@@ -578,7 +583,12 @@ def handle_wh_query(tree, q_type):
 		format, q_content = chop_relative_q(q_tree)
 	else:
 		error('q_type not valid while handling WH mem query: {}'.format(q_type))
-	
+
+
+def fetch_wh_do(content, wh_info):
+	# TODO: Fucking everything
+	print
+
 
 def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	subjects = {}
@@ -1226,6 +1236,14 @@ def all_nested_labels(tree):
 			labels.extend(all_nested_labels(child))
 	
 	return labels
+
+
+def lead_v(pred_content):
+	for g in pred_content:
+		if isinstance(g, list):
+			return get_lead_label(g)
+		elif isinstance(g, dict):
+			return g.items()[0]
 
 
 def to_tree(text):
