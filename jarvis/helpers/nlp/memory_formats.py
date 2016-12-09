@@ -65,7 +65,8 @@ STORAGE_PREDICATE_FORMATS = [
 WH_RETRIEVAL_PREDICATE_FORMATS = [
 	[{'VP': ['V*']}],
 	[{'VP': ['V*', 'NP']}],
-	['V*', 'NP', {'VP': ['V*']}]
+	['V(DO)', 'NP', {'VP': ['V*']}],
+	['V(DO)', 'NP', {'VP': ['V*', 'NP']}]
 ]
 
 # Labels currently restricted when storing memories

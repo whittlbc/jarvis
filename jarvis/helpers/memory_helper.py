@@ -80,7 +80,7 @@ def format_memory(text):
 	if subject['owner']:
 		lead_subj_type = 'rel'
 		lead_subj_owner_uid = uid()
-		subjects[lead_subj_owner_uid] = {'orig': subject['owner']} # handle 'my' or 'your' instances
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
 		
 		lead_subj_rel_uid = uid()
 		rels[lead_subj_rel_uid] = {
@@ -389,8 +389,6 @@ def upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map):
 
 	
 def format_modeled_content(data):
-	# TODO: Figure out what to do with V(DO) instances
-
 	modeled_data = []
 	content = {}
 		 
@@ -503,6 +501,8 @@ def get_verb_tag(verb):
 		return 'V(BE)'
 	elif lemmatized_verb in ['have', 'own', 'possess']:
 		return 'V(OWN)'
+	elif lemmatized_verb == 'do':
+		return 'V(DO)'
 	else:
 		return 'V*'
 	
@@ -558,22 +558,24 @@ def handle_wh_query(tree, q_type):
 	wh_tree, q_tree = tree[0]
 	wh_info = chop_wh(wh_tree)
 	
-	if not wh_info:
-		return None
+	if not wh_info: return False
 	
 	if q_type == 'direct':
 		format, q_content = chop_predicate(q_tree)
 		
-		if format not in WH_RETRIEVAL_PREDICATE_FORMATS:
-			return False
+		if format not in WH_RETRIEVAL_PREDICATE_FORMATS: return False
 		
-		leading_v_label, leading_v_word = lead_v(q_content)
+		leading_v = first_of_label(q_content)
+		
+		if not leading_v: return False
+		
+		leading_v_label = leading_v.keys()[0]
+		
+		if leading_v_label == 'V(DO)':
+			return fetch_wh_do(q_content, wh_info)
 		
 		if leading_v_label == 'V*':  # Action
-			if lemmatize(leading_v_word, pos='v') == 'do':
-				return fetch_wh_do(q_content[1:], wh_info)
-			else:
-				modeled_content = format_modeled_content(q_content)
+			modeled_content = format_modeled_content(q_content)
 		else:  # V(BE) or V(OWN)
 			modeled_content = format_modeled_content(q_content[1:])
 		
@@ -585,9 +587,147 @@ def handle_wh_query(tree, q_type):
 		error('q_type not valid while handling WH mem query: {}'.format(q_type))
 
 
-def fetch_wh_do(content, wh_info):
-	# TODO: Fucking everything
-	print
+def fetch_wh_do(q_content, wh_info):
+	np = first_of_label(q_content, label=phrases.NOUN_PHRASE)
+	
+	if not np:
+		error('WH-DO query has no NP for some reason...{}'.format(tree))
+	
+	sub_lists = [l for l in q_content if isinstance(l, list)]
+	
+	if not sub_lists:
+		error('WH-DO query has no VP for some reason...{}'.format(tree))
+	
+	action = {}
+	
+	for child in sub_lists[0]:  # the first VP
+		label, val = child.items()[0]
+		
+		if label == 'V*' and not action:
+			action['v'] = val
+			
+		# TODO: Will need to handle V(BE) and V(OWN)'s here as well
+			
+		elif label == phrases.NOUN_PHRASE and action:
+			action['subject'] = val
+	
+	if action:
+		action['adj'] = []
+		action['adv'] = []
+		subject = np.values()[0]
+		
+		if wh_info['wh'] in ['when', 'where']:
+			return handle_whadvp_do(subject, action, wh_info)
+		else:
+			return handle_whnp_do(subject, action, wh_info)
+		
+	return None
+
+
+def handle_whadvp_do(subject, action, wh_info):
+	wh = wh_info['wh']
+	# TODO: errthang
+	return None
+
+
+# Ex: What do I play?
+# Use subject as leading subject and assume that action doesn't have a 'subject' property
+# TODO: Still need to figure out how to deal with possessive wh_info's
+def handle_whnp_do(subject, action, wh_info):
+	subjects = {}
+	rels = {}
+	actions = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
+		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1  # change to class constants somewhere
+		}
+	
+	action_uid = uid()
+	actions[action_uid] = {'verb': action['v']}
+	
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	actions_uid_query_map = action_query_map(actions)
+
+	result = []
+
+	if lead_subj_type == 'subj':
+		ss_uid_info = {
+			'subj_a_uid': lead_subj_noun_uid,
+			'subj_b_uid': wh_info['wh'],
+			'action_uid': action_uid
+		}
+		
+		rs_uid_info = {
+			'rel_uid': wh_info['wh'],
+			'subject_uid': lead_subj_noun_uid,
+			'action_uid': action_uid
+		}
+		
+		ssa_results = find_models_through_ssa(
+			ss_uid_info,
+			actions_uid_query_map,
+			subj_uid_query_map
+		)
+
+		rsa_results = find_models_through_rsa(
+			rs_uid_info,
+			actions_uid_query_map,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			dir=-1
+		)
+		
+		result += [corrected_owner(r) for r in ssa_results]
+		
+		for group in rsa_results['rels']:
+			result.append(format_possession([corrected_owner(g) for g in group]))
+		
+	else:  # lead_subj_type = 'rel'
+		rs_uid_info = {
+			'rel_uid': lead_subj_rel_uid,
+			'subject_uid': wh_info['wh'],
+			'action_uid': action_uid
+		}
+		
+		rr_uid_info = {
+			'rel_a_uid': lead_subj_rel_uid,
+			'rel_b_uid': wh_info['wh'],
+			'action_uid': action_uid
+		}
+
+		rsa_results = find_models_through_rsa(
+			rs_uid_info,
+			actions_uid_query_map,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			dir=1
+		)
+			
+		rra_results = find_models_through_rra(
+			rr_uid_info,
+			actions_uid_query_map,
+			rel_uid_query_map
+		)
+		
+		result += [corrected_owner(r) for r in rsa_results['subjects']]
+				
+		for group in rra_results:
+			result.append(format_possession([corrected_owner(g) for g in group]))
+	
+	return and_join(result)
 
 
 def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
@@ -893,7 +1033,7 @@ def rel_query_map(rels, subj_uid_query_map):
 		
 		for key, val in keys_map.items():
 			if subj_uid_query_map.get(v[val]):
-				data[key] = subj_uid_query_map.get(v[val])
+				data[key] = '({})'.format(subj_uid_query_map.get(v[val]))
 			else:
 				# Deal with direct-rel queries later
 				print
@@ -984,7 +1124,7 @@ def find_models_through_rsa(rsa_info, actions_uid_query_map, subj_uid_query_map,
 		'subjects': [],
 		'rels': []
 	}
-		
+
 	if query_model == models.SUBJECT:
 		results['subjects'] = [r[0] for r in find(query_model, {'id': '({})'.format(rsa_query)}, returning='orig')]
 	else:
@@ -1238,12 +1378,14 @@ def all_nested_labels(tree):
 	return labels
 
 
-def lead_v(pred_content):
+def first_of_label(pred_content, label='*'):
 	for g in pred_content:
 		if isinstance(g, list):
-			return get_lead_label(g)
-		elif isinstance(g, dict):
-			return g.items()[0]
+			return first_of_label(g)
+		elif isinstance(g, dict) and g.keys() and (g.keys()[0] == label or label == '*'):
+			return g
+		
+	return None
 
 
 def to_tree(text):
