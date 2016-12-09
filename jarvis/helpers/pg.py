@@ -69,15 +69,17 @@ def keyify(d, connector=''):
 	groups = []
 	
 	for k, v in d.items():
-		assoc = '='
-		
 		if isinstance(v, basestring) and v[0] != '(':
 			v = "'{}'".format(v)
 		elif isinstance(v, list) or isinstance(v, tuple):
 			v = tuple(v)
-			assoc = 'IN'
 		else:
 			v = str(v)
+			
+		if isinstance(v, list) or isinstance(v, tuple) or (isinstance(v, basestring) and v[0] == '('):
+			assoc = 'IN'
+		else:
+			assoc = '='
 			
 		groups.append('{} {} {}'.format(k, assoc, v))
 	

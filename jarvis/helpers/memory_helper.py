@@ -62,10 +62,6 @@ def format_memory(text):
 	else:
 		modeled_content = format_modeled_content(pred_content[1:])
 
-	print modeled_content
-	
-	return False
-
 	# Models
 	subjects = {}
 	rels = {}
@@ -932,7 +928,6 @@ def find_models_through_ssa(ssa_info, actions_uid_query_map, subj_uid_query_map)
 				ssa_return_col = key
 				wh = val
 				query_model = model
-
 	
 	ssa_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning=ssa_return_col)
 	ssa_query = '{} {}'.format(ssa_query_prefix, keyify(data, connector=' AND '))
