@@ -730,6 +730,223 @@ def handle_whnp_do(subject, action, wh_info):
 	return and_join(result)
 
 
+def fetch_do_yn(q_content):
+	np = first_of_label(q_content, label=phrases.NOUN_PHRASE)
+	
+	if not np:
+		error('WH-DO query has no NP for some reason...{}'.format(tree))
+	
+	sub_lists = [l for l in q_content if isinstance(l, list)]
+	
+	if not sub_lists:
+		error('WH-DO query has no VP for some reason...{}'.format(tree))
+	
+	action = {}
+	
+	for child in sub_lists[0]:  # the first VP
+		label, val = child.items()[0]
+		
+		if label == 'V*' and not action:
+			action['v'] = val
+		
+		# TODO: Will need to handle V(BE) and V(OWN)'s here as well
+		
+		elif label == phrases.NOUN_PHRASE and action:
+			action['subject'] = val
+	
+	if action:
+		action['adj'] = []
+		action['adv'] = []
+		subject = np.values()[0]
+		
+		return handle_do_yn_action(subject, action)
+	
+	return 'No'
+
+
+def handle_do_yn_action(subject, action):
+	subjects = {}
+	rels = {}
+	actions = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
+		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1  # change to class constants somewhere
+		}
+	
+	action_uid = uid()
+	actions[action_uid] = {'verb': action['v']}
+	
+	action_subj = action.get('subject')
+	action_subj_type = None
+	
+	if action_subj and action_subj['noun'].lower() not in ['anything', 'anyone']:
+		action_subj_type = 'subj'
+		action_subj_noun_uid = uid()
+		subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
+		
+		if action_subj['owner']:
+			action_subj_type = 'rel'
+			action_subj_owner_uid = uid()
+			subjects[action_subj_owner_uid] = {'orig': action_subj['owner']}
+			
+			action_subj_rel_uid = uid()
+			rels[action_subj_rel_uid] = {
+				'subj_a_uid': action_subj_owner_uid,
+				'subj_b_uid': action_subj_noun_uid,
+				'relation': 1  # change to class constants somewhere
+			}
+		
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	actions_uid_query_map = action_query_map(actions)
+	
+	answer = 'No'
+	
+	if lead_subj_type == 'subj':
+		if not action_subj_type:
+			ss_uid_info = {
+				'subj_a_uid': lead_subj_noun_uid,
+				'subj_b_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			rs_uid_info = {
+				'rel_uid': '*',
+				'subject_uid': lead_subj_noun_uid,
+				'action_uid': action_uid
+			}
+			
+			ssa_results = find_models_through_ssa(
+				ss_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map
+			)
+			
+			rsa_results = find_models_through_rsa(
+				rs_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=-1
+			)
+			
+			if ssa_results or rsa_results['rsa_results']:
+				answer = 'Yes'
+			
+		elif action_subj_type == 'subj':
+			ss_uid_info = {
+				'subj_a_uid': lead_subj_noun_uid,
+				'subj_b_uid': action_subj_noun_uid,
+				'action_uid': action_uid
+			}
+			
+			ssa_results = find_models_through_ssa(
+				ss_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map
+			)
+			
+			if ssa_results:
+				answer = 'Yes'
+				
+		elif action_subj_type == 'rel':
+			rs_uid_info = {
+				'rel_uid': action_subj_rel_uid,
+				'subject_uid': lead_subj_noun_uid,
+				'action_uid': action_uid
+			}
+			
+			rsa_results = find_models_through_rsa(
+				rs_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=-1
+			)
+			
+			if rsa_results['rsa_results']:
+				answer = 'Yes'
+			
+	else:  # lead_subj_type = 'rel'
+		if not action_subj_type:
+			rs_uid_info = {
+				'rel_uid': lead_subj_rel_uid,
+				'subject_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			rr_uid_info = {
+				'rel_a_uid': lead_subj_rel_uid,
+				'rel_b_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			rsa_results = find_models_through_rsa(
+				rs_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=1
+			)
+			
+			rra_results = find_models_through_rra(
+				rr_uid_info,
+				actions_uid_query_map,
+				rel_uid_query_map
+			)
+		
+			if rsa_results['rsa_results'] or rra_results:
+				answer = 'Yes'
+				
+		elif action_subj_type == 'subj':
+			rs_uid_info = {
+				'rel_uid': lead_subj_rel_uid,
+				'subject_uid': action_subj_noun_uid,
+				'action_uid': action_uid
+			}
+			
+			rsa_results = find_models_through_rsa(
+				rs_uid_info,
+				actions_uid_query_map,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				dir=1
+			)
+			
+			if rsa_results['rsa_results']:
+				answer = 'Yes'
+			
+		elif action_subj_type == 'rel':
+			rr_uid_info = {
+				'rel_a_uid': lead_subj_rel_uid,
+				'rel_b_uid': action_subj_rel_uid,
+				'action_uid': action_uid
+			}
+			
+			rra_results = find_models_through_rra(
+				rr_uid_info,
+				actions_uid_query_map,
+				rel_uid_query_map
+			)
+			
+			if rra_results:
+				answer = 'Yes'
+				
+	return answer
+
+
 def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	subjects = {}
 	rels = {}
@@ -1065,6 +1282,8 @@ def find_models_through_ssa(ssa_info, actions_uid_query_map, subj_uid_query_map)
 	}
 		
 	data = {}
+	ssa_return_col = '*'
+	query_model = None
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -1076,8 +1295,10 @@ def find_models_through_ssa(ssa_info, actions_uid_query_map, subj_uid_query_map)
 		else:
 			if val != '*':
 				ssa_return_col = key
-				wh = val
 				query_model = model
+				
+	if not query_model:
+		return find(models.SUBJECT_SUBJECT_ACTION, data)
 	
 	ssa_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning=ssa_return_col)
 	ssa_query = '{} {}'.format(ssa_query_prefix, keyify(data, connector=' AND '))
@@ -1100,6 +1321,8 @@ def find_models_through_rsa(rsa_info, actions_uid_query_map, subj_uid_query_map,
 	}
 	
 	data = {}
+	rsa_return_col = '*'
+	query_model = None
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -1111,33 +1334,35 @@ def find_models_through_rsa(rsa_info, actions_uid_query_map, subj_uid_query_map,
 		else:
 			if val != '*':
 				rsa_return_col = key
-				wh = val
 				query_model = model
 			
 	if dir:
 		data['direction'] = dir
-	
-	rsa_query_prefix = select_where(models.REL_SUBJECT_ACTION, returning=rsa_return_col)
-	rsa_query = '{} {}'.format(rsa_query_prefix, keyify(data, connector=' AND '))
 		
 	results = {
 		'subjects': [],
-		'rels': []
+		'rels': [],
+		'rsa_results': []
 	}
-
-	if query_model == models.SUBJECT:
-		results['subjects'] = [r[0] for r in find(query_model, {'id': '({})'.format(rsa_query)}, returning='orig')]
-	else:
-		# models.REL
-		rels = find(query_model, {'id': '({})'.format(rsa_query), 'relation': 1})
-		rel_results = []
-								
-		if rels:
-			for r in rels:
-				subject_ids = (r[1], r[2])
-				rel_results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
 		
-		results['rels'] = rel_results
+	if not query_model:
+		results['rsa_results'] = find(models.REL_SUBJECT_ACTION, data)
+	else:
+		rsa_query_prefix = select_where(models.REL_SUBJECT_ACTION, returning=rsa_return_col)
+		rsa_query = '{} {}'.format(rsa_query_prefix, keyify(data, connector=' AND '))
+			
+		if query_model == models.SUBJECT:
+			results['subjects'] = [r[0] for r in find(query_model, {'id': '({})'.format(rsa_query)}, returning='orig')]
+		else:
+			rels = find(query_model, {'id': '({})'.format(rsa_query), 'relation': 1})
+			rel_results = []
+									
+			if rels:
+				for r in rels:
+					subject_ids = (r[1], r[2])
+					rel_results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
+			
+			results['rels'] = rel_results
 	
 	return results
 
@@ -1150,6 +1375,8 @@ def find_models_through_rra(rra_info, actions_uid_query_map, rel_uid_query_map):
 	}
 		
 	data = {}
+	rra_return_col = '*'
+	query_model = None
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -1161,8 +1388,10 @@ def find_models_through_rra(rra_info, actions_uid_query_map, rel_uid_query_map):
 		else:
 			if val != '*':
 				rra_return_col = key
-				wh = val
 				query_model = model
+				
+	if not query_model:
+		return find(models.REL_REL_ACTION, data)
 	
 	rra_query_prefix = select_where(models.REL_REL_ACTION, returning=rra_return_col)
 	rra_query = '{} {}'.format(rra_query_prefix, keyify(data, connector=' AND '))
@@ -1179,8 +1408,30 @@ def find_models_through_rra(rra_info, actions_uid_query_map, rel_uid_query_map):
 
 
 def handle_yes_no_query(t):
-	return 'Yes'
+	q_tree = t[0]
+	format, q_content = chop_predicate(q_tree)
 	
+	if format not in WH_RETRIEVAL_PREDICATE_FORMATS: return False
+	
+	leading_v = first_of_label(q_content)
+	
+	if not leading_v: return False
+	
+	leading_v_label = leading_v.keys()[0]
+	
+	if leading_v_label == 'V(DO)':
+		return fetch_do_yn(q_content)
+	
+	return None
+	
+	# if leading_v_label == 'V*':
+	# 	modeled_content = format_modeled_content(q_content)
+	# else:
+	# 	modeled_content = format_modeled_content(q_content[1:])
+	
+	# return fetch_memory_wh(modeled_content, wh_info, leading_v_label)
+	
+
 
 def chop_relative_q(s):
 	print
