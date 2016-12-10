@@ -956,9 +956,10 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	subj_subj_actions = {}
 	rel_subj_actions = {}
 	rel_rel_actions = {}
+	
+	inner_subj_type = None
 		
 	for data in modeled_content:
-		
 		if leading_v_label == 'V*':  # ACTION
 			a = data['action']
 			action_uid = uid()
@@ -1000,88 +1001,31 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 						'direction': -1
 					}
 		
-		else: # eq relation queries and and description queries
-			print
-			# if data.get('subject'):
-			# 	outer_subj = data['subject']
-			#
-			# 	outer_subj_type = 'subj'
-			# 	outer_subj_noun_uid = uid()
-			# 	subjects[outer_subj_noun_uid] = {'orig': outer_subj['noun']}
-			#
-			# 	if outer_subj['owner']:
-			# 		outer_subj_type = 'rel'
-			# 		outer_subj_owner_uid = uid()
-			# 		subjects[outer_subj_owner_uid] = {'orig': outer_subj['owner']}
-			#
-			# 		outer_subj_rel_uid = uid()
-			# 		rels[outer_subj_rel_uid] = {
-			# 			'subj_a_uid': outer_subj_owner_uid,
-			# 			'subj_b_uid': outer_subj_noun_uid,
-			# 			'relation': 1  # change to class constants somewhere
-			# 		}
-			#
-			# 	if lead_subj_type == 'subj' and outer_subj_type == 'subj':
-			# 		rel_uid = uid()
-			#
-			# 		if leading_v_label == 'V(BE)':
-			# 			order = 0
-			# 		else:
-			# 			order = 1
-			#
-			# 		rels[rel_uid] = {
-			# 			'subj_a_uid': lead_subj_noun_uid,
-			# 			'subj_b_uid': outer_subj_noun_uid,
-			# 			'relation': order
-			# 		}
-			#
-			# 	elif lead_subj_type == 'rel' and outer_subj_type == 'subj':
-			# 		rel_subj_uid = uid()
-			#
-			# 		if leading_v_label == 'V(BE)':
-			# 			order = 0
-			# 		else:
-			# 			order = 1
-			#
-			# 		rel_subjects[rel_subj_uid] = {
-			# 			'rel_uid': lead_subj_rel_uid,
-			# 			'subject_uid': outer_subj_noun_uid,
-			# 			'relation': order
-			# 		}
-			#
-			# 	elif lead_subj_type == 'subj' and outer_subj_type == 'rel':
-			# 		rel_subj_uid = uid()
-			#
-			# 		if leading_v_label == 'V(BE)':
-			# 			order = 0
-			# 		else:
-			# 			order = -1
-			#
-			# 		rel_subjects[rel_subj_uid] = {
-			# 			'rel_uid': outer_subj_rel_uid,
-			# 			'subject_uid': lead_subj_noun_uid,
-			# 			'relation': order
-			# 		}
-			#
-			# 	else:
-			# 		rel_rel_uid = uid()
-			#
-			# 		if leading_v_label == 'V(BE)':
-			# 			order = 0
-			# 		else:
-			# 			order = 1
-			#
-			# 		rel_rels[rel_rel_uid] = {
-			# 			'rel_a_uid': lead_subj_rel_uid,
-			# 			'rel_b_uid': outer_subj_rel_uid,
-			# 			'relation': order
-			# 		}
+		else:  # V(BE) or V(OWN) relations
+			if data.get('subject'):  # type of rel exists
+				inner_subj = data['subject']
+
+				inner_subj_type = 'subj'
+				inner_subj_noun_uid = uid()
+				subjects[inner_subj_noun_uid] = {'orig': inner_subj['noun']}
+
+				if inner_subj['owner']:
+					inner_subj_type = 'rel'
+					inner_subj_owner_uid = uid()
+					subjects[inner_subj_owner_uid] = {'orig': inner_subj['owner']}
+
+					inner_subj_rel_uid = uid()
+					rels[inner_subj_rel_uid] = {
+						'subj_a_uid': inner_subj_owner_uid,
+						'subj_b_uid': inner_subj_noun_uid,
+						'relation': 1
+					}
 
 	result = []
 
 	subj_uid_query_map = subject_query_map(subjects)
 	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
-		
+			
 	if actions:
 		actions_uid_query_map = action_query_map(actions)
 		
@@ -1208,10 +1152,72 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				result.append(format_possession([corrected_owner(g) for g in group]))
 	
 	else:
-		# Will have to do with fetching EQ rels and and descriptions
-		# Do something with these rel_subjects if they exist
-		# rel_subj_uid_query_map = upsert_rel_subjects(rel_subjects, subj_uid_query_map, rel_uid_query_map)
-		print
+		if leading_v_label == 'V(BE)':
+			if inner_subj_type == 'subj':
+				r_uid_info = {
+					'subj_a_uid': wh_info['wh'],
+					'subj_b_uid': inner_subj_noun_uid
+				}
+				
+				rs_uid_info = {
+					'rel_uid': wh_info['wh'],
+					'subject_uid': inner_subj_noun_uid
+				}
+				
+				r_results = find_models_through_r(
+					r_uid_info,
+					subj_uid_query_map,
+					relation=0
+				)
+				
+				rs_results = find_models_through_rs(
+					rs_uid_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					relation=0
+				)
+
+				result += [corrected_owner(r) for r in r_results]
+				
+				for group in rs_results['rels']:
+					result.append(format_possession([corrected_owner(g) for g in group]))
+			
+			elif inner_subj_type == 'rel':
+				rs_uid_info = {
+					'rel_uid': inner_subj_rel_uid,
+					'subject_uid': wh_info['wh']
+				}
+				
+				rr_uid_info = {
+					'rel_a_uid': wh_info['wh'],
+					'rel_b_uid': inner_subj_rel_uid
+				}
+				
+				rs_results = find_models_through_rs(
+					rs_uid_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					relation=0
+				)
+				
+				rr_results = find_models_through_rr(
+					rr_uid_info,
+					rel_uid_query_map,
+					relation=0
+				)
+				
+				result += [corrected_owner(r) for r in rs_results['subjects']]
+				
+				for group in rr_results:
+					result.append(format_possession([corrected_owner(g) for g in group]))
+			
+			else:
+				# description handler
+				print
+
+		elif leading_v_label == 'V(OWN)':
+			# TODO
+			print
 	
 	return and_join(result)
 
@@ -1274,6 +1280,140 @@ def action_query_map(actions):
 	return uid_query_map
 
 
+def find_models_through_r(r_info, subj_uid_query_map, relation=None):
+	query_keys_map = {
+		'a_id': [subj_uid_query_map, 'subj_a_uid', models.SUBJECT],
+		'b_id': [subj_uid_query_map, 'subj_b_uid', models.SUBJECT]
+	}
+	
+	data = {}
+	
+	if relation:
+		data['relation'] = relation
+	
+	r_return_col = '*'
+	query_model = None
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = r_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			if val != '*':
+				r_return_col = key
+				query_model = model
+	
+	if not query_model:
+		return find(models.REL, data)
+	
+	r_query_prefix = select_where(models.REL, returning=r_return_col)
+	r_query = '{} {}'.format(r_query_prefix, keyify(data, connector=' AND '))
+	
+	results = find(query_model, {'id': '({})'.format(r_query)}, returning='orig')
+	
+	return [r[0] for r in results]
+
+
+def find_models_through_rs(rs_info, subj_uid_query_map, rel_uid_query_map, relation=None):
+	query_keys_map = {
+		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL],
+		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
+	}
+	
+	data = {}
+	
+	if relation:
+		data['relation'] = relation
+	
+	rs_return_col = '*'
+	query_model = None
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rs_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			if val != '*':
+				rs_return_col = key
+				query_model = model
+	
+	results = {
+		'subjects': [],
+		'rels': [],
+		'rs_results': []
+	}
+	
+	if not query_model:
+		results['rs_results'] = find(models.REL_SUBJECT, data)
+	else:
+		rs_query_prefix = select_where(models.REL_SUBJECT, returning=rs_return_col)
+		rs_query = '{} {}'.format(rs_query_prefix, keyify(data, connector=' AND '))
+		
+		if query_model == models.SUBJECT:
+			results['subjects'] = [r[0] for r in find(query_model, {'id': '({})'.format(rs_query)}, returning='orig')]
+		else:
+			rels = find(query_model, {'id': '({})'.format(rs_query), 'relation': 1})
+			rel_results = []
+			
+			if rels:
+				for r in rels:
+					subject_ids = (r[1], r[2])
+					rel_results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
+			
+			results['rels'] = rel_results
+	
+	return results
+
+
+def find_models_through_rr(rr_info, rel_uid_query_map, relation=None):
+	query_keys_map = {
+		'a_id': [rel_uid_query_map, 'rel_a_uid', models.REL],
+		'b_id': [rel_uid_query_map, 'rel_b_uid', models.REL]
+	}
+	
+	data = {}
+	
+	if relation:
+		data['relation'] = relation
+
+	rr_return_col = '*'
+	query_model = None
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rr_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			if val != '*':
+				rr_return_col = key
+				query_model = model
+	
+	if not query_model:
+		return find(models.REL_REL, data)
+	
+	rr_query_prefix = select_where(models.REL_REL, returning=rr_return_col)
+	rr_query = '{} {}'.format(rr_query_prefix, keyify(data, connector=' AND '))
+	
+	rels = find(query_model, {'id': '({})'.format(rr_query), 'relation': 1})
+	results = []
+	
+	if rels:
+		for r in rels:
+			subject_ids = (r[1], r[2])
+			results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
+	
+	return results
+
+
 def find_models_through_ssa(ssa_info, actions_uid_query_map, subj_uid_query_map):
 	query_keys_map = {
 		'a_id': [subj_uid_query_map, 'subj_a_uid', models.SUBJECT],
@@ -1321,6 +1461,10 @@ def find_models_through_rsa(rsa_info, actions_uid_query_map, subj_uid_query_map,
 	}
 	
 	data = {}
+	
+	if dir:
+		data['direction'] = dir
+		
 	rsa_return_col = '*'
 	query_model = None
 	
@@ -1335,9 +1479,6 @@ def find_models_through_rsa(rsa_info, actions_uid_query_map, subj_uid_query_map,
 			if val != '*':
 				rsa_return_col = key
 				query_model = model
-			
-	if dir:
-		data['direction'] = dir
 		
 	results = {
 		'subjects': [],
