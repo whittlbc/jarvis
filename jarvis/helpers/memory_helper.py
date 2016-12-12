@@ -1297,21 +1297,44 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	else:
 		if leading_v_label == 'V(BE)':
 			if inner_subj_type == 'subj':
-				r_uid_info = {
-					'subj_a_uid': wh_info['wh'],
-					'subj_b_uid': inner_subj_noun_uid
-				}
+				r_uid_info = [
+					{
+						'subj_a_uid': wh_info['wh'],
+						'subj_b_uid': inner_subj_noun_uid,
+						'relation': 0
+					},
+					{
+						'subj_a_uid': inner_subj_noun_uid,
+						'subj_b_uid': wh_info['wh'],
+						'relation': 0
+					},
+					{
+						'subj_a_uid': inner_subj_noun_uid,
+						'subj_b_uid': wh_info['wh'],
+						'relation': 2
+					}
+				]
 				
 				rs_uid_info = {
 					'rel_uid': wh_info['wh'],
 					'subject_uid': inner_subj_noun_uid
 				}
 				
-				r_results = find_models_through_r(
-					r_uid_info,
-					subj_uid_query_map,
-					relation=0
-				)
+				r_results_eq = []
+				r_results_pc = []
+				for info in r_uid_info:
+					r_result = find_models_through_r(
+						info,
+						subj_uid_query_map,
+						relation=info['relation']
+					)
+					
+					if info['relation'] == 0:
+						r_results_eq += [corrected_owner(r) for r in r_result]
+					elif info['relation'] == 2:
+						r_results_pc += [corrected_owner(r) for r in r_result]
+				
+				result += r_results_eq
 				
 				rs_results = find_models_through_rs(
 					rs_uid_info,
@@ -1319,41 +1342,72 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					rel_uid_query_map,
 					relation=0
 				)
-
-				result += [corrected_owner(r) for r in r_results]
 				
 				for group in rs_results['rels']:
 					result.append(format_possession([corrected_owner(g) for g in group]))
 			
-			elif inner_subj_type == 'rel':
-				rs_uid_info = {
-					'rel_uid': inner_subj_rel_uid,
-					'subject_uid': wh_info['wh']
-				}
-				
-				rr_uid_info = {
-					'rel_a_uid': wh_info['wh'],
-					'rel_b_uid': inner_subj_rel_uid
-				}
-				
-				rs_results = find_models_through_rs(
-					rs_uid_info,
-					subj_uid_query_map,
-					rel_uid_query_map,
-					relation=0
-				)
-				
-				rr_results = find_models_through_rr(
-					rr_uid_info,
-					rel_uid_query_map,
-					relation=0
-				)
-				
-				result += [corrected_owner(r) for r in rs_results['subjects']]
-				
-				for group in rr_results:
-					result.append(format_possession([corrected_owner(g) for g in group]))
+				# If no EQ relations, only then add the PC relations
+				if not result:
+					result += [add_det_prefix(r) for r in r_results_pc]
 			
+			elif inner_subj_type == 'rel':
+				rs_uid_info = [
+					{
+						'rel_uid': inner_subj_rel_uid,
+						'subject_uid': wh_info['wh'],
+						'relation': 0
+					},
+					{
+						'rel_uid': inner_subj_rel_uid,
+						'subject_uid': wh_info['wh'],
+						'relation': 2
+					}
+				]
+				
+				rr_uid_info = [
+					{
+						'rel_a_uid': wh_info['wh'],
+						'rel_b_uid': inner_subj_rel_uid,
+						'relation': 0
+					},
+					{
+						'rel_a_uid': inner_subj_rel_uid,
+						'rel_b_uid': wh_info['wh'],
+						'relation': 0
+					}
+				]
+				
+				rs_results_eq = []
+				rs_results_pc = []
+				for info in rs_uid_info:
+					rs_result = find_models_through_rs(
+						info,
+						subj_uid_query_map,
+						rel_uid_query_map,
+						relation=info['relation']
+					)
+					
+					if info['relation'] == 0:
+						rs_results_eq += [corrected_owner(r) for r in r_result['subjects']]
+					elif info['relation'] == 2:
+						rs_results_pc += [corrected_owner(r) for r in r_result['subjects']]
+				
+				result += rs_results_eq
+				
+				for info in rr_uid_info:
+					rr_result = find_models_through_rr(
+						info,
+						rel_uid_query_map,
+						relation=info['relation']
+					)
+					
+					for group in rr_result:
+						result.append(format_possession([corrected_owner(g) for g in group]))
+				
+				# If no EQ relations, only then add the PC relations
+				if not result:
+					result += [add_det_prefix(r) for r in rs_results_pc]
+					
 			else:
 				# description handler
 				print
@@ -1848,6 +1902,15 @@ def strip_trailing_punc(text):
 def strip_last_branch(t):
 	t[0].pop()
 	return t
+
+
+def add_det_prefix(w):
+	if w[0] in ['a', 'e', 'i', 'o', 'u']:
+		det = 'an'
+	else:
+		det = 'a'
+	
+	return '{} {}'.format(det, w)
 
 
 def valid_np_children(np):
