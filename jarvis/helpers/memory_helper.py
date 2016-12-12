@@ -15,6 +15,7 @@ parser = sp.parser()
 words = sp.words
 phrases = sp.phrases
 clauses = sp.clauses
+special = sp.special
 nouns = sp.nouns
 adjectives = sp.adjectives
 adverbs = sp.adverbs
@@ -513,36 +514,40 @@ def get_verb_tag(verb):
 
 def query_memory(text):
 	answer = None
-	text = strip_trailing_punc(text)
+	text = ensure_trailing_q_mark(text)
 	
-	# Replace leading 'do' with 'did' --> TODO: change to regex
-	if text.split()[0].lower() == 'do':
+	if lemmatize(text.split()[0].lower(), pos='v') == 'do':
 		text = ' '.join(['Did'] + text.split()[1:])
 	
 	tree = to_tree(text)
 	
 	if is_direct_wh_query(tree):
-		answer = handle_wh_query(tree, 'direct')
+		answer = handle_wh_query(strip_last_branch(tree), 'direct')
+		
 	elif is_relative_wh_query(tree):
-		answer = handle_wh_query(tree, 'relative')
+		answer = handle_wh_query(strip_last_branch(tree), 'relative')
+		
 	elif is_yes_no_query(tree, text):
-		answer = handle_yes_no_query(tree)
+		answer = handle_yes_no_query(strip_last_branch(tree))
 	
 	return answer
 
 
 def is_direct_wh_query(t):
 	return t[0].label() == clauses.DIRECT_WH_QUESTION \
-		and len(t[0]) == 2 \
+		and len(t[0]) == 3 \
 		and t[0][0].label() in [phrases.WH_NOUN_PHRASE, phrases.WH_ADV_PHRASE] \
-		and t[0][1].label() == clauses.INVERTED_YES_NO
+		and t[0][1].label() == clauses.INVERTED_YES_NO \
+		and t[0][2].label() == special.PUNC
 	
 
+# any examples of this? --> can we somehow morph it into the ^above structure?
 def is_relative_wh_query(t):
 	return t[0].label() == clauses.RELATIVE_CLAUSE \
-		and len(t[0]) == 2 \
+		and len(t[0]) == 3 \
 		and t[0][0].label() == phrases.WH_NOUN_PHRASE \
-		and t[0][1].label() == clauses.DECLARATION
+		and t[0][1].label() == clauses.DECLARATION \
+		and t[0][2].label() == special.PUNC
 
 
 def is_yes_no_query(tree, text):
@@ -550,8 +555,9 @@ def is_yes_no_query(tree, text):
 	lead_word_prompts_yn = lemmatize(lead_word, pos='v') in ['be', 'do'] or lead_word in modals
 	
 	return lead_word_prompts_yn \
-	  and tree[0].label() == clauses.INVERTED_DECLARATION \
-		and len(tree[0]) in [2, 3]
+	  and tree[0].label() == clauses.INVERTED_YES_NO \
+		and len(tree[0]) in [3, 4] \
+		and tree[0][len(tree[0]) - 1].label() == special.PUNC
 
 
 def handle_wh_query(tree, q_type):
@@ -759,10 +765,134 @@ def fetch_do_yn(q_content):
 		action['adv'] = []
 		subject = np.values()[0]
 		
-		return handle_do_yn_action(subject, action)
+		all_eq_subjs = find_all_subj_eqs(subject)
+		
+		for s in all_eq_subjs:
+			result = handle_do_yn_action(s, action)
+			
+			if result == 'Yes':
+				return result
 	
 	return 'No'
 
+
+def find_all_subj_eqs(subject):
+	eq_subjects = [subject]
+	subjects = {}
+	rels = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
+		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1
+		}
+		
+		rs_uid_info = {
+			'rel_uid': lead_subj_rel_uid,
+			'subject_uid': 'wh*'
+		}
+		
+		rr_uid_info = [
+			{
+				'rel_a_uid': lead_subj_rel_uid,
+				'rel_b_uid': 'wh*'
+			},
+			{
+				'rel_a_uid': 'wh*',
+				'rel_b_uid': lead_subj_rel_uid
+			}
+		]
+		
+		subj_uid_query_map = subject_query_map(subjects)
+		rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+		
+		rs_result = find_models_through_rs(
+			rs_uid_info,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			relation=0
+		)
+		
+		for s in rs_result['subjects']:
+			eq_subjects.append({
+				'owner': None,
+				'noun': s,
+				'description': {'adv': [], 'adj': []}
+			})
+			
+		for info in rr_uid_info:
+			rr_result = find_models_through_rr(
+				info,
+				rel_uid_query_map,
+				relation=0
+			)
+			
+			for r in rr_result:
+				eq_subjects.append({
+					'owner': r[0],
+					'noun': r[1],
+					'description': {'adv': [], 'adj': []}
+				})
+	else:
+		r_uid_info = [
+			{
+				'subj_a_uid': lead_subj_noun_uid,
+				'subj_b_uid': 'wh*',
+			},
+			{
+				'subj_a_uid': 'wh*',
+				'subj_b_uid': lead_subj_noun_uid,
+			}
+		]
+		
+		rs_uid_info = {
+			'rel_uid': 'wh*',
+			'subject_uid': lead_subj_noun_uid,
+		}
+		
+		subj_uid_query_map = subject_query_map(subjects)
+		rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+		
+		for info in r_uid_info:
+			r_result = find_models_through_r(
+				info,
+				subj_uid_query_map,
+				relation=0
+			)
+			
+			for s in r_result:
+				eq_subjects.append({
+					'owner': None,
+					'noun': s,
+					'description': {'adv': [], 'adj': []}
+				})
+		
+		rs_result = find_models_through_rs(
+			rs_uid_info,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			relation=0
+		)
+		
+		for r in rs_result['rels']:
+			eq_subjects.append({
+				'owner': r[0],
+				'noun': r[1],
+				'description': {'adv': [], 'adj': []}
+			})
+	
+	return eq_subjects
+	
 
 def handle_do_yn_action(subject, action):
 	subjects = {}
@@ -784,7 +914,7 @@ def handle_do_yn_action(subject, action):
 			'subj_b_uid': lead_subj_noun_uid,
 			'relation': 1  # change to class constants somewhere
 		}
-	
+		
 	action_uid = uid()
 	actions[action_uid] = {'verb': action['v']}
 	
@@ -1266,6 +1396,55 @@ def rel_query_map(rels, subj_uid_query_map):
 	return uid_query_map
 
 
+def rel_subject_query_map(rel_subjects, subj_uid_query_map, rel_uid_query_map):
+	uid_query_map = {}
+	query = select_where(models.REL_SUBJECT, returning='id')
+	
+	keys_map = {
+		'rel_id': ['rel_uid', rel_uid_query_map],
+		'subject_id': ['subject_uid', subj_uid_query_map]
+	}
+	
+	for k, v in rel_subjects.items():
+		data = {
+			'relation': v['relation']
+		}
+		
+		for key, val in keys_map.items():
+			uid_key, m = val
+			sub_query = m.get(v[uid_key])
+			
+			if sub_query:
+				data[key] = '({})'.format(sub_query)
+		
+		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+	
+	return uid_query_map
+
+
+def rel_rel_query_map(rel_rels, rel_uid_query_map):
+	uid_query_map = {}
+	query = select_where(models.REL_REL, returning='id')
+	
+	keys_map = {
+		'a_id': 'rel_a_uid',
+		'b_id': 'rel_b_uid'
+	}
+	
+	for k, v in rel_rels.items():
+		data = {
+			'relation': v['relation']
+		}
+		
+		for key, val in keys_map.items():
+			if rel_uid_query_map.get(v[val]):
+				data[key] = '({})'.format(rel_uid_query_map.get(v[val]))
+		
+		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+	
+	return uid_query_map
+
+
 def action_query_map(actions):
 	uid_query_map = {}
 	query = select_where(models.ACTION, returning='id')
@@ -1288,7 +1467,7 @@ def find_models_through_r(r_info, subj_uid_query_map, relation=None):
 	
 	data = {}
 	
-	if relation:
+	if relation != None:
 		data['relation'] = relation
 	
 	r_return_col = '*'
@@ -1325,7 +1504,7 @@ def find_models_through_rs(rs_info, subj_uid_query_map, rel_uid_query_map, relat
 	
 	data = {}
 	
-	if relation:
+	if relation != None:
 		data['relation'] = relation
 	
 	rs_return_col = '*'
@@ -1379,7 +1558,7 @@ def find_models_through_rr(rr_info, rel_uid_query_map, relation=None):
 	
 	data = {}
 	
-	if relation:
+	if relation != None:
 		data['relation'] = relation
 
 	rr_return_col = '*'
@@ -1694,8 +1873,13 @@ def labeled_leaves(tree):
 	return leaves
 
 
-def strip_trailing_punc(text):
-	return text.strip().rstrip('?:!.,;')
+def ensure_trailing_q_mark(text):
+	return text.strip().rstrip('?:!.,;') + '?'
+
+
+def strip_last_branch(t):
+	t[0].pop()
+	return t
 
 
 def valid_np_children(np):

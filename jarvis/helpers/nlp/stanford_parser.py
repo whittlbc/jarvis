@@ -80,11 +80,16 @@ class Words:
 	WH_PRONOUN = 'WP'
 	POSSESSIVE_WH_PRONOUN = 'WP$'
 	WH_ADVERB = 'WRB'
+	
+
+class Special:
+	PUNC = '.'
 
 
 clauses = Clauses()
 phrases = Phrases()
 words = Words()
+special = Special()
 
 
 def word_labels():
