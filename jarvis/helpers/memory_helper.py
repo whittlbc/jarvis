@@ -174,7 +174,8 @@ def format_memory(text):
 			
 			if data.get('subject'):
 				outer_subj = data['subject']
-				
+				det = outer_subj['det']
+					
 				outer_subj_type = 'subj'
 				outer_subj_noun_uid = uid()
 				subjects[outer_subj_noun_uid] = {'orig': outer_subj['noun']}
@@ -195,7 +196,10 @@ def format_memory(text):
 					rel_uid = uid()
 					
 					if leading_v_label == 'V(BE)':
-						order = 0
+						if det and det.lower() in ['a', 'an']:
+							order = 2
+						else:
+							order = 0
 					else:
 						order = 1
 						
@@ -209,7 +213,10 @@ def format_memory(text):
 					rel_subj_uid = uid()
 					
 					if leading_v_label == 'V(BE)':
-						order = 0
+						if det and det.lower() in ['a', 'an']:
+							order = 2
+						else:
+							order = 0
 					else:
 						order = 1
 						
@@ -223,7 +230,10 @@ def format_memory(text):
 					rel_subj_uid = uid()
 					
 					if leading_v_label == 'V(BE)':
-						order = 0
+						if det and det.lower() in ['a', 'an']:
+							order = 2
+						else:
+							order = 0
 					else:
 						order = -1
 						
@@ -237,7 +247,10 @@ def format_memory(text):
 					rel_rel_uid = uid()
 					
 					if leading_v_label == 'V(BE)':
-						order = 0
+						if det and det.lower() in ['a', 'an']:
+							order = 2
+						else:
+							order = 0
 					else:
 						order = 1
 						
@@ -246,7 +259,7 @@ def format_memory(text):
 						'rel_b_uid': outer_subj_rel_uid,
 						'relation': order
 					}
-					
+	
 	# Subjects
 	subj_uid_id_map = upsert_subjects(subjects)
 	
@@ -514,7 +527,7 @@ def get_verb_tag(verb):
 
 def query_memory(text):
 	answer = None
-	text = ensure_trailing_q_mark(text)
+	text = strip_trailing_punc(text) + '?'
 	
 	if lemmatize(text.split()[0].lower(), pos='v') == 'do':
 		text = ' '.join(['Did'] + text.split()[1:])
@@ -1721,7 +1734,7 @@ def chop_np(np):
 	if not valid_np_children(np):
 		return None
 	
-	subject = {'noun': None, 'owner': None}
+	subject = {'noun': None, 'owner': None, 'det': None}
 	adjs, advs = [], []
 	
 	groups = labeled_leaves(np)
@@ -1732,6 +1745,8 @@ def chop_np(np):
 		
 		if not subject['noun'] and label in nouns:
 			subject['noun'] = word
+		elif not subject['det'] and label == words.DETERMINER:
+			subject['det'] = word
 		elif label in adjectives:
 			adjs.append(word)
 		elif label in adverbs:
@@ -1752,6 +1767,7 @@ def chop_np(np):
 	data = {
 		'noun': subject['noun'],
 		'owner': None,
+		'det': subject['det'],
 		'description': {
 			'adj': adjs,
 			'adv': advs
@@ -1761,7 +1777,8 @@ def chop_np(np):
 	# if possession exists
 	if subject['owner']:
 		data['owner'] = corrected_owner(subject['owner'], from_bot_perspec=False)
-	
+		data['det'] = None
+		
 	return data
 
 
@@ -1824,8 +1841,8 @@ def labeled_leaves(tree):
 	return leaves
 
 
-def ensure_trailing_q_mark(text):
-	return text.strip().rstrip('?:!.,;') + '?'
+def strip_trailing_punc(text):
+	return text.strip().rstrip('?:!.,;')
 
 
 def strip_last_branch(t):
