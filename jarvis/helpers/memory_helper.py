@@ -1396,55 +1396,6 @@ def rel_query_map(rels, subj_uid_query_map):
 	return uid_query_map
 
 
-def rel_subject_query_map(rel_subjects, subj_uid_query_map, rel_uid_query_map):
-	uid_query_map = {}
-	query = select_where(models.REL_SUBJECT, returning='id')
-	
-	keys_map = {
-		'rel_id': ['rel_uid', rel_uid_query_map],
-		'subject_id': ['subject_uid', subj_uid_query_map]
-	}
-	
-	for k, v in rel_subjects.items():
-		data = {
-			'relation': v['relation']
-		}
-		
-		for key, val in keys_map.items():
-			uid_key, m = val
-			sub_query = m.get(v[uid_key])
-			
-			if sub_query:
-				data[key] = '({})'.format(sub_query)
-		
-		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
-	
-	return uid_query_map
-
-
-def rel_rel_query_map(rel_rels, rel_uid_query_map):
-	uid_query_map = {}
-	query = select_where(models.REL_REL, returning='id')
-	
-	keys_map = {
-		'a_id': 'rel_a_uid',
-		'b_id': 'rel_b_uid'
-	}
-	
-	for k, v in rel_rels.items():
-		data = {
-			'relation': v['relation']
-		}
-		
-		for key, val in keys_map.items():
-			if rel_uid_query_map.get(v[val]):
-				data[key] = '({})'.format(rel_uid_query_map.get(v[val]))
-		
-		uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
-	
-	return uid_query_map
-
-
 def action_query_map(actions):
 	uid_query_map = {}
 	query = select_where(models.ACTION, returning='id')
