@@ -795,6 +795,40 @@ def fetch_do_yn(q_content):
 	return 'No'
 
 
+# Is Tyler my brother?
+def fetch_is_yn(q_content):
+	# Strip out NP's from content
+	subjects = [t.values()[0] for t in q_content if t.keys()[0] == phrases.NOUN_PHRASE]
+	
+	# Ensure 2 subjects exist since we're checking for a comparison.
+	if len(subjects) != 2:
+		error('Is-YN query doesn\'t have 2 NP instances for comparison...{}'.format(q_content))
+	
+	former, latter = subjects
+	
+	if latter['det'] and latter['det'].lower() in ['a', 'an']:
+		print
+		# handle relation=2 shit
+	else:
+		equiv_subjs = [s for s in find_all_subj_eqs(former) if s != former]
+		
+		latter_match_info = [None, latter['noun'].lower()]
+		
+		if latter['owner']:
+			latter_match_info[0] = latter['owner'].lower()
+		
+		for s in equiv_subjs:
+			s_info = [None, s['noun'].lower()]
+			
+			if s['owner']:
+				s_info[0] = s['owner'].lower()
+			
+			if s_info == latter_match_info:
+				return 'Yes'
+		
+	return 'No'
+		
+
 def find_all_subj_eqs(subject):
 	eq_subjects = [subject]
 	subjects = {}
@@ -846,6 +880,7 @@ def find_all_subj_eqs(subject):
 			eq_subjects.append({
 				'owner': None,
 				'noun': s,
+				'det': None,
 				'description': {'adv': [], 'adj': []}
 			})
 			
@@ -860,6 +895,7 @@ def find_all_subj_eqs(subject):
 				eq_subjects.append({
 					'owner': r[0],
 					'noun': r[1],
+					'det': None,
 					'description': {'adv': [], 'adj': []}
 				})
 	else:
@@ -893,6 +929,7 @@ def find_all_subj_eqs(subject):
 				eq_subjects.append({
 					'owner': None,
 					'noun': s,
+					'det': None,
 					'description': {'adv': [], 'adj': []}
 				})
 		
@@ -907,6 +944,7 @@ def find_all_subj_eqs(subject):
 			eq_subjects.append({
 				'owner': r[0],
 				'noun': r[1],
+				'det': None,
 				'description': {'adv': [], 'adj': []}
 			})
 	
@@ -1753,7 +1791,7 @@ def find_models_through_rra(rra_info, actions_uid_query_map, rel_uid_query_map):
 def handle_yes_no_query(t):
 	q_tree = t[0]
 	format, q_content = chop_predicate(q_tree)
-	
+		
 	if format not in WH_RETRIEVAL_PREDICATE_FORMATS: return False
 	
 	leading_v = first_of_label(q_content)
@@ -1764,16 +1802,10 @@ def handle_yes_no_query(t):
 	
 	if leading_v_label == 'V(DO)':
 		return fetch_do_yn(q_content)
+	elif leading_v_label == 'V(BE)':
+		return fetch_is_yn(q_content)
 	
 	return None
-	
-	# if leading_v_label == 'V*':
-	# 	modeled_content = format_modeled_content(q_content)
-	# else:
-	# 	modeled_content = format_modeled_content(q_content[1:])
-	
-	# return fetch_memory_wh(modeled_content, wh_info, leading_v_label)
-	
 
 
 def chop_relative_q(s):
