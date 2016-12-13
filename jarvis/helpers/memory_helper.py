@@ -634,11 +634,17 @@ def fetch_wh_do(q_content, wh_info):
 		action['adj'] = []
 		action['adv'] = []
 		subject = np.values()[0]
+
+		all_eq_subjs = find_all_subj_eqs(subject)
 		
 		if wh_info['wh'] in ['when', 'where']:
-			return handle_whadvp_do(subject, action, wh_info)
+			handle_method = handle_whadvp_do
 		else:
-			return handle_whnp_do(subject, action, wh_info)
+			handle_method = handle_whnp_do
+		
+		for s in all_eq_subjs:
+			result = handle_method(s, action, wh_info)
+			if result: return result
 		
 	return None
 
@@ -681,7 +687,7 @@ def handle_whnp_do(subject, action, wh_info):
 	actions_uid_query_map = action_query_map(actions)
 
 	result = []
-
+	
 	if lead_subj_type == 'subj':
 		ss_uid_info = {
 			'subj_a_uid': lead_subj_noun_uid,
