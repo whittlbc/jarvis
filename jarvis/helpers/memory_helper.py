@@ -1173,8 +1173,7 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 		actions_uid_query_map = action_query_map(actions)
 		
 		if action_subj_type == 'subj':  # Ex: Who plays basketball?
-			# query SubjectSubjectActions and RelSubjectActions
-				
+			
 			# Since action_subj_type = 'subj', subj_subj_actions must exist since this is a query
 			ss_uid_info = subj_subj_actions.values()[0]
 			wh = ss_uid_info['subj_a_uid']  # we know this is the WH word since A is the unknown
@@ -1388,9 +1387,9 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					)
 					
 					if info['relation'] == 0:
-						rs_results_eq += [corrected_owner(r) for r in r_result['subjects']]
+						rs_results_eq += [corrected_owner(r) for r in rs_result['subjects']]
 					elif info['relation'] == 2:
-						rs_results_pc += [corrected_owner(r) for r in r_result['subjects']]
+						rs_results_pc += [corrected_owner(r) for r in rs_result['subjects']]
 				
 				result += rs_results_eq
 				
