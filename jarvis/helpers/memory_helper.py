@@ -806,28 +806,93 @@ def fetch_is_yn(q_content):
 	
 	former, latter = subjects
 	
-	if latter['det'] and latter['det'].lower() in ['a', 'an']:
-		print
-		# handle relation=2 shit
-	else:
-		equiv_subjs = [s for s in find_all_subj_eqs(former) if s != former]
-		
-		latter_match_info = [None, latter['noun'].lower()]
-		
-		if latter['owner']:
-			latter_match_info[0] = latter['owner'].lower()
-		
+	equiv_subjs = [s for s in find_all_subj_eqs(former)]
+	
+	if latter['det'] and latter['det'].lower() in ['a', 'an']: # relation=2
+		parents = []
 		for s in equiv_subjs:
-			s_info = [None, s['noun'].lower()]
+			parents += find_parents_for_child(s)
+		
+		equiv_subjs = parents
+		
+	else: # relation=0
+		equiv_subjs = [s for s in equiv_subjs if s != former]
 			
-			if s['owner']:
-				s_info[0] = s['owner'].lower()
-			
-			if s_info == latter_match_info:
-				return 'Yes'
+	latter_match_info = [None, latter['noun'].lower()]
+	
+	if latter['owner']:
+		latter_match_info[0] = latter['owner'].lower()
+	
+	for s in equiv_subjs:
+		s_info = [None, s['noun'].lower()]
+		
+		if s['owner']:
+			s_info[0] = s['owner'].lower()
+		
+		if s_info == latter_match_info:
+			return 'Yes'
 		
 	return 'No'
+
+
+def find_parents_for_child(subject):
+	parents = []
+	subjects = {}
+	rels = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
 		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1
+		}
+		
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	
+	if lead_subj_type == 'subj':
+		r_uid_info = {
+			'subj_a_uid': lead_subj_noun_uid,
+			'subj_b_uid': 'wh*',
+		}
+		
+		results = find_models_through_r(
+			r_uid_info,
+			subj_uid_query_map,
+			relation=2
+		)
+	else:
+		rs_uid_info = {
+			'rel_uid': lead_subj_rel_uid,
+			'subject_uid': 'wh*'
+		}
+		
+		results = find_models_through_rs(
+			rs_uid_info,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			relation=2
+		)['subjects']
+		
+	for s in results:
+		parents.append({
+			'owner': None,
+			'noun': s,
+			'det': None,
+			'description': {'adv': [], 'adj': []}
+		})
+		
+	return parents
+			
 
 def find_all_subj_eqs(subject):
 	eq_subjects = [subject]
