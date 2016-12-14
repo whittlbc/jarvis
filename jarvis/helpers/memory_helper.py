@@ -4,6 +4,7 @@ from jarvis.helpers.nlp.lemmatizer import lemmatizer
 from jarvis.helpers.nlp.names import names_map
 from jarvis.helpers.helpers import corrected_owner, format_possession, and_join
 from nltk.tree import Tree
+from nltk import pos_tag
 from jarvis import logger
 from numpy import random
 from jarvis.helpers.models import Models
@@ -536,14 +537,22 @@ def get_verb_tag(verb):
 ################################
 
 def query_memory(text):
-	answer = None
-	text = strip_trailing_punc(text) + '?'
+	trailing_words = []
+	count = 0
 	
-	if lemmatize(text.split()[0].lower(), pos='v') == 'do':
-		text = ' '.join(['Did'] + text.split()[1:])
-	
+	for g in pos_tag(strip_trailing_punc(text).split()):
+		word, label = g
+		
+		if label == words.MODAL or (count == 0 and lemmatize(word.lower(), pos='v') == 'do'):
+			word = 'did'
+		
+		trailing_words.append(word)
+		count += 1
+		
+	text = ' '.join(trailing_words) + '?'
 	tree = to_tree(text)
 	
+	answer = None
 	if is_direct_wh_query(tree):
 		answer = handle_wh_query(strip_last_branch(tree), 'direct')
 		
