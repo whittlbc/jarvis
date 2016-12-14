@@ -780,33 +780,44 @@ def fetch_do_yn(q_content):
 	if not np:
 		error('WH-DO query has no NP for some reason...{}'.format(tree))
 	
+	subject = np.values()[0]
 	sub_lists = [l for l in q_content if isinstance(l, list)]
 	
 	if not sub_lists:
 		error('WH-DO query has no VP for some reason...{}'.format(tree))
 	
 	action = {}
+	possession = None
+	saw_v_own = False
 	
 	for child in sub_lists[0]:  # the first VP
 		label, val = child.items()[0]
 		
-		if label == 'V*' and not action:
+		if label == 'V*' and not subject:
 			action['v'] = val
-		
-		# TODO: Will need to handle V(BE) and V(OWN)'s here as well
-		
+			
+		elif label == 'V(OWN)':
+			saw_v_own = True
+			
 		elif label == phrases.NOUN_PHRASE and action:
 			action['subject'] = val
+			
+		elif label == phrases.NOUN_PHRASE and saw_v_own:
+			possession = val
 	
 	if action:
 		action['adj'] = []
 		action['adv'] = []
-		subject = np.values()[0]
 		
-		all_eq_subjs = find_all_subj_eqs(subject)
-		
-		for s in all_eq_subjs:
+		for s in find_all_subj_eqs(subject):
 			result = handle_do_yn_action(s, action)
+			
+			if result == 'Yes':
+				return result
+	
+	elif possession:
+		for s in find_all_subj_eqs(subject):
+			result = handle_do_yn_possession(s, possession)
 			
 			if result == 'Yes':
 				return result
@@ -1216,6 +1227,104 @@ def handle_do_yn_action(subject, action):
 				answer = 'Yes'
 				
 	return answer
+
+
+# Determine if subject owns the possession
+def handle_do_yn_possession(subject, possession):
+	subjects = {}
+	rels = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
+		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1
+		}
+	
+	poss_subj_type = 'subj'
+	poss_subj_noun_uid = uid()
+	subjects[poss_subj_noun_uid] = {'orig': possession['noun']}
+	
+	if possession['owner']:
+		poss_subj_type = 'rel'
+		poss_subj_owner_uid = uid()
+		subjects[poss_subj_owner_uid] = {'orig': possession['owner']}
+		
+		poss_subj_rel_uid = uid()
+		rels[poss_subj_rel_uid] = {
+			'subj_a_uid': poss_subj_owner_uid,
+			'subj_b_uid': poss_subj_noun_uid,
+			'relation': 1
+		}
+
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	
+	result = None
+	
+	if lead_subj_type == 'subj' and poss_subj_type == 'subj':
+		r_uid_info = {
+			'subj_a_uid': lead_subj_noun_uid,
+			'subj_b_uid': poss_subj_noun_uid,
+		}
+		
+		result = find_models_through_r(
+			r_uid_info,
+			subj_uid_query_map,
+			relation=1
+		)
+		
+	elif lead_subj_type == 'subj' and poss_subj_type == 'rel':
+		rs_uid_info = {
+			'rel_uid': poss_subj_rel_uid,
+			'subject_uid': lead_subj_noun_uid
+		}
+		
+		result = find_models_through_rs(
+			rs_uid_info,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			relation=-1
+		)['rs_results']
+	
+	elif lead_subj_type == 'rel' and poss_subj_type == 'subj':
+		rs_uid_info = {
+			'rel_uid': lead_subj_noun_uid,
+			'subject_uid': poss_subj_noun_uid
+		}
+		
+		result = find_models_through_rs(
+			rs_uid_info,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			relation=1
+		)['rs_results']
+		
+	else:
+		rr_uid_info = {
+			'rel_a_uid': lead_subj_rel_uid,
+			'rel_b_uid': poss_subj_rel_uid
+		}
+		
+		result = find_models_through_rr(
+			rr_uid_info,
+			rel_uid_query_map,
+			relation=1
+		)
+	
+	if result:
+		return 'Yes'
+	else:
+		return 'No'
 
 
 def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
