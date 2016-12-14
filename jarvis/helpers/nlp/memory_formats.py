@@ -68,6 +68,7 @@ WH_RETRIEVAL_PREDICATE_FORMATS = [
 	['V(DO)', 'NP', {'VP': ['V*']}],
 	['V(DO)', 'NP', {'VP': ['V*', 'NP']}],
 	['V(DO)', 'NP', {'VP': ['V(OWN)', 'NP']}],
+	['V(DO)', 'NP', {'VP': ['V(OWN)']}],
 	['V(BE)', 'NP'],
 	['V(BE)', 'NP', 'NP'],
 	[{'VP': ['V(OWN)', 'NP']}],

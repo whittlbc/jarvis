@@ -631,45 +631,63 @@ def fetch_wh_do(q_content, wh_info):
 	if not np:
 		error('WH-DO query has no NP for some reason...{}'.format(tree))
 	
+	subject = np.values()[0]
 	sub_lists = [l for l in q_content if isinstance(l, list)]
 	
 	if not sub_lists:
 		error('WH-DO query has no VP for some reason...{}'.format(tree))
 	
 	action = {}
+	possession = None
+	saw_v_own = False
 	
 	for child in sub_lists[0]:  # the first VP
 		label, val = child.items()[0]
 		
 		if label == 'V*' and not action:
 			action['v'] = val
-			
-		# TODO: Will need to handle V(BE) and V(OWN)'s here as well
-			
+		
+		elif label == 'V(OWN)':
+			saw_v_own = True
+		
 		elif label == phrases.NOUN_PHRASE and action:
 			action['subject'] = val
+		
+		# Not supporting the use of NP's after WH-DO-OWN's yet
+		# elif label == phrases.NOUN_PHRASE and saw_v_own:
+		# 	possession = val
 	
 	if action:
 		action['adj'] = []
 		action['adv'] = []
-		subject = np.values()[0]
 
-		all_eq_subjs = find_all_subj_eqs(subject)
-		
 		if wh_info['wh'] in ['when', 'where']:
-			handle_method = handle_whadvp_do
+			handle_method = handle_whadvp_do_action
 		else:
-			handle_method = handle_whnp_do
+			handle_method = handle_whnp_do_action
 		
-		for s in all_eq_subjs:
+		for s in find_all_subj_eqs(subject):
 			result = handle_method(s, action, wh_info)
-			if result: return result
-		
+			
+			if result: 
+				return result
+			
+	elif saw_v_own:
+		if wh_info['wh'] in ['when', 'where']:
+			handle_method = handle_whadvp_do_possession
+		else:
+			handle_method = handle_whnp_do_possession
+			
+		for s in find_all_subj_eqs(subject):
+			result = handle_method(s, possession, wh_info)
+			
+			if result:
+				return result
+	
 	return None
 
 
-def handle_whadvp_do(subject, action, wh_info):
-	wh = wh_info['wh']
+def handle_whadvp_do_action(subject, action, wh_info):
 	# TODO: errthang
 	return None
 
@@ -677,7 +695,7 @@ def handle_whadvp_do(subject, action, wh_info):
 # Ex: What do I play?
 # Use subject as leading subject and assume that action doesn't have a 'subject' property
 # TODO: Still need to figure out how to deal with possessive wh_info's
-def handle_whnp_do(subject, action, wh_info):
+def handle_whnp_do_action(subject, action, wh_info):
 	subjects = {}
 	rels = {}
 	actions = {}
@@ -771,6 +789,101 @@ def handle_whnp_do(subject, action, wh_info):
 		for group in rra_results:
 			result.append(format_possession([corrected_owner(g) for g in group]))
 	
+	return and_join(result)
+
+
+def handle_whadvp_do_possession(subject, possession, wh_info):
+	# TODO: errthang
+	return None
+
+
+# Ex: What do I have?
+# TODO: Still need to figure out how to deal with possessive wh_info's
+def handle_whnp_do_possession(subject, possession, wh_info):
+	subjects = {}
+	rels = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
+		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1
+		}
+		
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	
+	result = []
+
+	if lead_subj_type == 'subj':
+		r_uid_info = {
+			'subj_a_uid': lead_subj_noun_uid,
+			'subj_b_uid': wh_info['wh'],
+		}
+		
+		rs_uid_info = {
+			'rel_uid': wh_info['wh'],
+			'subject_uid': lead_subj_noun_uid
+		}
+		
+		r_results = find_models_through_r(
+			r_uid_info,
+			subj_uid_query_map,
+			relation=1
+		)
+		
+		rs_results = find_models_through_rs(
+			rs_uid_info,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			relation=-1
+		)
+		
+		r_results = [corrected_owner(r) for r in r_results]
+		result += [add_det_prefix(w) for w in r_results]
+		
+		for group in rs_results['rels']:
+			result.append(format_possession([corrected_owner(g) for g in group]))
+	
+	else:  # lead_subj_type == 'rel'
+		rs_uid_info = {
+			'rel_uid': lead_subj_rel_uid,
+			'subject_uid': wh_info['wh']
+		}
+		
+		rr_uid_info = {
+			'rel_a_uid': lead_subj_rel_uid,
+			'rel_b_uid': wh_info['wh']
+		}
+		
+		rs_results = find_models_through_rs(
+			rs_uid_info,
+			subj_uid_query_map,
+			rel_uid_query_map,
+			relation=1
+		)
+		
+		rr_results = find_models_through_rr(
+			rr_uid_info,
+			rel_uid_query_map,
+			relation=1
+		)
+		
+		rs_subj_results = [corrected_owner(r) for r in rs_results['subjects']]
+		result += [add_det_prefix(w) for w in rs_subj_results]
+		
+		for group in rr_results:
+			result.append(format_possession([corrected_owner(g) for g in group]))
+		
 	return and_join(result)
 
 
@@ -1775,10 +1888,10 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					relation=-1
 				)
 										
-				for group in rr_result:
+				for group in rr_results:
 					result.append(format_possession([corrected_owner(g) for g in group]))
 					
-				result += [corrected_owner(r) for r in rs_result['subjects']]
+				result += [corrected_owner(r) for r in rs_results['subjects']]
 	
 	return and_join(result)
 
