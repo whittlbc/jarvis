@@ -1427,9 +1427,16 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 						'relation': 0
 					},
 					{
+						'subj_a_uid': wh_info['wh'],
+						'subj_b_uid': inner_subj_noun_uid,
+						'relation': 2,
+						'add_det': False
+					},
+					{
 						'subj_a_uid': inner_subj_noun_uid,
 						'subj_b_uid': wh_info['wh'],
-						'relation': 2
+						'relation': 2,
+						'add_det': True
 					}
 				]
 				
@@ -1450,7 +1457,13 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					if info['relation'] == 0:
 						r_results_eq += [corrected_owner(r) for r in r_result]
 					elif info['relation'] == 2:
-						r_results_pc += [corrected_owner(r) for r in r_result]
+						for r in r_result:
+							formatted_r = corrected_owner(r)
+							
+							if info['add_det']:
+								formatted_r = add_det_prefix(formatted_r)
+							
+							r_results_pc.append(formatted_r)
 				
 				result += r_results_eq
 				
@@ -1466,7 +1479,7 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 			
 				# If no EQ relations, only then add the PC relations
 				if not result:
-					result += [add_det_prefix(r) for r in r_results_pc]
+					result = r_results_pc
 			
 			elif inner_subj_type == 'rel':
 				rs_uid_info = [
@@ -1478,7 +1491,8 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					{
 						'rel_uid': inner_subj_rel_uid,
 						'subject_uid': wh_info['wh'],
-						'relation': 2
+						'relation': 2,
+						'add_det': True
 					}
 				]
 				
@@ -1508,7 +1522,13 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					if info['relation'] == 0:
 						rs_results_eq += [corrected_owner(r) for r in rs_result['subjects']]
 					elif info['relation'] == 2:
-						rs_results_pc += [corrected_owner(r) for r in rs_result['subjects']]
+						for r in rs_result['subjects']:
+							formatted_r = corrected_owner(r)
+							
+							if info['add_det']:
+								formatted_r = add_det_prefix(formatted_r)
+							
+							rs_results_pc.append(formatted_r)
 				
 				result += rs_results_eq
 				
@@ -1524,7 +1544,7 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				
 				# If no EQ relations, only then add the PC relations
 				if not result:
-					result += [add_det_prefix(r) for r in rs_results_pc]
+					result = rs_results_pc
 					
 			else:
 				# description handler
