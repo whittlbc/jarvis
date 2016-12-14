@@ -230,10 +230,15 @@ def format_memory(text):
 					rel_subj_uid = uid()
 					
 					if leading_v_label == 'V(BE)':
-						if det and det.lower() in ['a', 'an']:
-							order = 2
-						else:
-							order = 0
+						order = 0
+					
+						# If something like "Tyler is my brother", we should also
+						# store the parent-child equivalent: "Tyler is a brother"
+						rels[uid()] = {
+							'subj_a_uid': lead_subj_noun_uid,
+							'subj_b_uid': outer_subj_noun_uid,
+							'relation': 2
+						}
 					else:
 						order = -1
 						
@@ -247,10 +252,15 @@ def format_memory(text):
 					rel_rel_uid = uid()
 					
 					if leading_v_label == 'V(BE)':
-						if det and det.lower() in ['a', 'an']:
-							order = 2
-						else:
-							order = 0
+						order = 0
+
+						# If something like "My friend is my brother", we should also
+						# store the parent-child equivalent: "My friend is a brother"
+						rel_subjects[uid()] = {
+							'rel_uid': lead_subj_rel_uid,
+							'subject_uid': outer_subj_noun_uid,
+							'relation': 2
+						}
 					else:
 						order = 1
 						
@@ -270,9 +280,9 @@ def format_memory(text):
 	
 	# Actions
 	actions_uid_id_map = upsert_actions(actions)
-	subj_subj_actions_uid_id_map = upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_map)
-	rel_subj_actions_uid_id_map = upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map, rel_uid_id_map)
-	rel_rel_actions_uid_id_map = upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
+	upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_map)
+	upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map, rel_uid_id_map)
+	upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
 	
 	return True
 	
