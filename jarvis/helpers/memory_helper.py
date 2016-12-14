@@ -171,8 +171,6 @@ def format_memory(text):
 					}
 					
 		else:
-			# only subjects and descriptions will exists here...
-			
 			if data.get('subject'):
 				outer_subj = data['subject']
 				det = outer_subj['det']
@@ -201,7 +199,7 @@ def format_memory(text):
 							order = 2
 						else:
 							order = 0
-					else:
+					else: # V(OWN)
 						order = 1
 						
 					rels[rel_uid] = {
@@ -218,7 +216,7 @@ def format_memory(text):
 							order = 2
 						else:
 							order = 0
-					else:
+					else: # V(OWN)
 						order = 1
 						
 					rel_subjects[rel_subj_uid] = {
@@ -240,7 +238,7 @@ def format_memory(text):
 							'subj_b_uid': outer_subj_noun_uid,
 							'relation': 2
 						}
-					else:
+					else: # V(OWN)
 						order = -1
 						
 					rel_subjects[rel_subj_uid] = {
@@ -249,7 +247,7 @@ def format_memory(text):
 						'relation': order
 					}
 					
-				else:
+				else: # both are 'rel'
 					rel_rel_uid = uid()
 					
 					if leading_v_label == 'V(BE)':
@@ -262,7 +260,7 @@ def format_memory(text):
 							'subject_uid': outer_subj_noun_uid,
 							'relation': 2
 						}
-					else:
+					else: # V(OWN)
 						order = 1
 						
 					rel_rels[rel_rel_uid] = {
@@ -416,7 +414,7 @@ def upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map):
 def format_modeled_content(data):
 	modeled_data = []
 	content = {}
-		 
+		 	
 	for child in data:
 		if isinstance(child, list):
 			modeled_data.extend(format_modeled_content(child))
@@ -551,8 +549,8 @@ def query_memory(text):
 		
 	text = ' '.join(trailing_words) + '?'
 	tree = to_tree(text)
-	
 	answer = None
+	
 	if is_direct_wh_query(tree):
 		answer = handle_wh_query(strip_last_branch(tree), 'direct')
 		
@@ -604,7 +602,7 @@ def handle_wh_query(tree, q_type):
 		if format not in WH_RETRIEVAL_PREDICATE_FORMATS: return False
 		
 		leading_v = first_of_label(q_content)
-		
+	
 		if not leading_v: return False
 		
 		leading_v_label = leading_v.keys()[0]
@@ -612,15 +610,17 @@ def handle_wh_query(tree, q_type):
 		if leading_v_label == 'V(DO)':
 			return fetch_wh_do(q_content, wh_info)
 		
-		if leading_v_label == 'V*':  # Action
+		if leading_v_label == 'V*':
 			modeled_content = format_modeled_content(q_content)
-		else:  # V(BE) or V(OWN)
+		elif leading_v_label == 'V(BE)':
 			modeled_content = format_modeled_content(q_content[1:])
+		else:
+			modeled_content = format_modeled_content(q_content[0][1:])
 		
 		return fetch_memory_wh(modeled_content, wh_info, leading_v_label)
 		
 	elif q_type == 'relative':
-		format, q_content = chop_relative_q(q_tree)
+		error('q_type "relative" not yet implemented...{}'.format(q_type))
 	else:
 		error('q_type not valid while handling WH mem query: {}'.format(q_type))
 
@@ -1560,8 +1560,65 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				print
 
 		elif leading_v_label == 'V(OWN)':
-			# TODO
-			print
+			if inner_subj_type == 'subj':
+				r_uid_info = {
+					'subj_a_uid': wh_info['wh'],
+					'subj_b_uid': inner_subj_noun_uid,
+				}
+				
+				rs_uid_info = {
+					'rel_uid': wh_info['wh'],
+					'subject_uid': inner_subj_noun_uid
+				}
+
+				r_results = find_models_through_r(
+					r_uid_info,
+					subj_uid_query_map,
+					relation=1
+				)
+								
+				rs_results = find_models_through_rs(
+					rs_uid_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					relation=1
+				)
+				
+				result += [corrected_owner(r) for r in r_results]
+				
+				for group in rs_results['rels']:
+					result.append(format_possession([corrected_owner(g) for g in group]))
+			
+			elif inner_subj_type == 'rel':
+				rr_uid_info = {
+					'rel_a_uid': wh_info['wh'],
+					'rel_b_uid': inner_subj_rel_uid,
+					'relation': 1
+				}
+
+				rs_uid_info = {
+					'rel_uid': inner_subj_rel_uid,
+					'subject_uid': wh_info['wh'],
+					'relation': -1
+				}
+				
+				rr_results = find_models_through_rr(
+					rr_uid_info,
+					rel_uid_query_map,
+					relation=1
+				)
+				
+				rs_results = find_models_through_rs(
+					rs_uid_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					relation=-1
+				)
+										
+				for group in rr_result:
+					result.append(format_possession([corrected_owner(g) for g in group]))
+					
+				result += [corrected_owner(r) for r in rs_result['subjects']]
 	
 	return and_join(result)
 
