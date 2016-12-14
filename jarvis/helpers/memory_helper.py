@@ -1073,7 +1073,7 @@ def handle_do_yn_action(subject, action):
 	action_subj = action.get('subject')
 	action_subj_type = None
 	
-	if action_subj and action_subj['noun'].lower() not in ['anything', 'anyone']:
+	if action_subj and action_subj['noun'].lower() not in ['anything', 'something']:
 		action_subj_type = 'subj'
 		action_subj_noun_uid = uid()
 		subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
@@ -1249,27 +1249,30 @@ def handle_do_yn_possession(subject, possession):
 			'subj_b_uid': lead_subj_noun_uid,
 			'relation': 1
 		}
-	
-	poss_subj_type = 'subj'
-	poss_subj_noun_uid = uid()
-	subjects[poss_subj_noun_uid] = {'orig': possession['noun']}
-	
-	if possession['owner']:
-		poss_subj_type = 'rel'
-		poss_subj_owner_uid = uid()
-		subjects[poss_subj_owner_uid] = {'orig': possession['owner']}
 		
-		poss_subj_rel_uid = uid()
-		rels[poss_subj_rel_uid] = {
-			'subj_a_uid': poss_subj_owner_uid,
-			'subj_b_uid': poss_subj_noun_uid,
-			'relation': 1
-		}
+	poss_subj_type = None
+	
+	if possession['noun'].lower() not in ['anything', 'something']:
+		poss_subj_type = 'subj'
+		poss_subj_noun_uid = uid()
+		subjects[poss_subj_noun_uid] = {'orig': possession['noun']}
+		
+		if possession['owner']:
+			poss_subj_type = 'rel'
+			poss_subj_owner_uid = uid()
+			subjects[poss_subj_owner_uid] = {'orig': possession['owner']}
+			
+			poss_subj_rel_uid = uid()
+			rels[poss_subj_rel_uid] = {
+				'subj_a_uid': poss_subj_owner_uid,
+				'subj_b_uid': poss_subj_noun_uid,
+				'relation': 1
+			}
 
 	subj_uid_query_map = subject_query_map(subjects)
 	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
 	
-	result = None
+	result = []
 	
 	if lead_subj_type == 'subj' and poss_subj_type == 'subj':
 		r_uid_info = {
@@ -1295,7 +1298,7 @@ def handle_do_yn_possession(subject, possession):
 			rel_uid_query_map,
 			relation=-1
 		)['rs_results']
-	
+				
 	elif lead_subj_type == 'rel' and poss_subj_type == 'subj':
 		rs_uid_info = {
 			'rel_uid': lead_subj_noun_uid,
@@ -1309,7 +1312,7 @@ def handle_do_yn_possession(subject, possession):
 			relation=1
 		)['rs_results']
 		
-	else:
+	elif lead_subj_type == 'rel' and poss_subj_type == 'rel':
 		rr_uid_info = {
 			'rel_a_uid': lead_subj_rel_uid,
 			'rel_b_uid': poss_subj_rel_uid
@@ -1320,7 +1323,55 @@ def handle_do_yn_possession(subject, possession):
 			rel_uid_query_map,
 			relation=1
 		)
-	
+	else: # possession['noun'] == 'anything'
+		if lead_subj_type == 'subj':
+			r_uid_info = {
+				'subj_a_uid': lead_subj_noun_uid,
+				'subj_b_uid': '*',
+			}
+			
+			rs_uid_info = {
+				'rel_uid': '*',
+				'subject_uid': lead_subj_noun_uid
+			}
+			
+			result += find_models_through_r(
+				r_uid_info,
+				subj_uid_query_map,
+				relation=1
+			)
+
+			result += find_models_through_rs(
+				rs_uid_info,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				relation=-1
+			)['rs_results']
+		
+		else: # lead_subj_type == 'rel'
+			rs_uid_info = {
+				'rel_uid': lead_subj_rel_uid,
+				'subject_uid': '*'
+			}
+			
+			rr_uid_info = {
+				'rel_a_uid': lead_subj_rel_uid,
+				'rel_b_uid': '*'
+			}
+			
+			result += find_models_through_rs(
+				rs_uid_info,
+				subj_uid_query_map,
+				rel_uid_query_map,
+				relation=1
+			)['rs_results']
+			
+			result += find_models_through_rr(
+				rr_uid_info,
+				rel_uid_query_map,
+				relation=1
+			)
+			
 	if result:
 		return 'Yes'
 	else:
