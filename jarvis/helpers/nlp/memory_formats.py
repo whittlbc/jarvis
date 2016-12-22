@@ -5,7 +5,7 @@ words = sp.words
 STORAGE_PREDICATE_FORMATS = [
 	# ['V(BE)'],
 	['V(BE)', 'NP'],
-	# ['V(BE)', 'PP'],
+	['V(BE)', 'PP'],
 	# ['V(BE)', 'NP', 'NP'],
 	['V(BE)', {'VP': ['V*']}],
 	['V(BE)', {'VP': ['V*', 'NP']}],

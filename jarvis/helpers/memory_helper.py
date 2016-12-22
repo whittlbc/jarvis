@@ -73,6 +73,9 @@ def format_memory(text):
 	subj_subj_actions = {}
 	rel_subj_actions = {}
 	rel_rel_actions = {}
+	ss_locations = {}
+	rs_locations = {}
+	rr_locations = {}
 	
 	# handle the leading subject first
 	lead_subj_type = 'subj'
@@ -268,7 +271,68 @@ def format_memory(text):
 						'rel_b_uid': outer_subj_rel_uid,
 						'relation': order
 					}
-	
+			
+			else:
+				# LOCATION
+				if data.get('location'):
+					loc = data['location']
+					prep = loc['prep']
+					loc_subj = loc['subject']
+					
+					loc_subj_type = 'subj'
+					loc_subj_noun_uid = uid()
+					subjects[loc_subj_noun_uid] = {'orig': loc_subj['noun']}
+					
+					if loc_subj['owner']:
+						loc_subj_type = 'rel'
+						loc_subj_owner_uid = uid()
+						subjects[loc_subj_owner_uid] = {'orig': loc_subj['owner']}
+						
+						loc_subj_rel_uid = uid()
+						rels[loc_subj_rel_uid] = {
+							'subj_a_uid': loc_subj_owner_uid,
+							'subj_b_uid': loc_subj_noun_uid,
+							'relation': 1
+						}
+					
+					if lead_subj_type == 'subj' and loc_subj_type == 'subj':
+						ss_locations[uid()] = {
+							'subj_a_uid': lead_subj_noun_uid,
+							'subj_b_uid': loc_subj_noun_uid,
+							'prep': prep
+						}
+						
+					elif lead_subj_type == 'rel' and loc_subj_type == 'subj':
+						rs_locations[uid()] = {
+							'rel_uid': lead_subj_rel_uid,
+							'subject_uid': loc_subj_noun_uid,
+							'prep': prep,
+							'direction': 1
+						}
+						
+					elif lead_subj_type == 'subj' and loc_subj_type == 'rel':
+						rs_locations[uid()] = {
+							'rel_uid': loc_subj_rel_uid,
+							'subject_uid': lead_subj_noun_uid,
+							'prep': prep,
+							'direction': -1
+						}
+						
+					else:
+						rr_locations[uid()] = {
+							'rel_a_uid': lead_subj_rel_uid,
+							'rel_b_uid': loc_subj_rel_uid,
+							'prep': prep
+						}
+					
+				elif data.get('datetime'):
+					# same as location pretty much
+					print
+					
+				else:
+					# description
+					print
+						
 	# Subjects
 	subj_uid_id_map = upsert_subjects(subjects)
 	
@@ -279,9 +343,14 @@ def format_memory(text):
 	
 	# Actions
 	actions_uid_id_map = upsert_actions(actions)
-	upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_map)
-	upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map, rel_uid_id_map)
-	upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
+	subj_subj_action_uid_id_map = upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_map)
+	rel_subj_action_uid_id_map = upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map, rel_uid_id_map)
+	rel_rel_action_uid_id_map = upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map)
+	
+	# Locations
+	upsert_ss_locations(ss_locations, subj_uid_id_map)
+	upsert_rs_locations(rs_locations, subj_uid_id_map, rel_uid_id_map)
+	upsert_rr_locations(rr_locations, rel_uid_id_map)
 	
 	return True
 	
@@ -410,7 +479,56 @@ def upsert_rel_rel_actions(rel_rel_actions, actions_uid_id_map, rel_uid_id_map):
 	
 	return uid_id_map
 
+
+def upsert_ss_locations(ss_locations, subj_uid_id_map):
+	uid_id_map = {}
 	
+	for k, v in ss_locations.items():
+		data = {
+			'a_id': subj_uid_id_map[v['subj_a_uid']],
+			'b_id': subj_uid_id_map[v['subj_b_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.SS_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+
+
+def upsert_rs_locations(rs_locations, subj_uid_id_map, rel_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in rs_locations.items():
+		data = {
+			'rel_id': rel_uid_id_map[v['rel_uid']],
+			'subject_id': subj_uid_id_map[v['subject_uid']],
+			'prep': v['prep'],
+			'direction': v['direction']
+		}
+		
+		id = upsert(models.RS_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+
+
+def upsert_rr_locations(rr_locations, rel_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in rr_locations.items():
+		data = {
+			'a_id': rel_uid_id_map[v['rel_a_uid']],
+			'b_id': rel_uid_id_map[v['rel_b_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.RR_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+
+
 def format_modeled_content(data):
 	modeled_data = []
 	content = {}
@@ -430,11 +548,20 @@ def format_modeled_content(data):
 					'adv': []
 				}
 				
-			elif key == 'NP':
+			elif key == phrases.NOUN_PHRASE:
 				if content.get('action'):
 					content['action']['subject'] = val
 				else:
 					content['subject'] = val
+					
+			elif key == phrases.PREP_PHRASE:
+				prep_data = {'prep': val['prep'], 'subject': val['np']}
+				prep_type = val['prep_type'] # 'datetime' or 'location'
+				
+				if content.get('action'):
+					content['action'][prep_type] = prep_data
+				else:
+					content[prep_type] = prep_data
 			
 	modeled_data.append(content)
 			
@@ -482,10 +609,11 @@ def chop_predicate(tree):
 				format_content.extend([fc])
 				
 			elif label in [phrases.NOUN_PHRASE, phrases.PREP_PHRASE]:
+				# Check if this tree has any PP children (whether NP or PP)
 				pp_children = [c for c in child if has_label(c, phrases.PREP_PHRASE)]
 				
 				if pp_children:
-					error('{} tree cannot have and PP\'s for children just yet'.format(label))
+					error('{} tree cannot have PP\'s for children just yet'.format(label))
 				
 				format.append(label)
 				
@@ -2250,10 +2378,29 @@ def chop_relative_q(s):
 # HELPERS
 ################################
 
-# Need to format a response into some when/where/with style structure
-def chop_pp(pp):
-	return {}
+def is_datetime(noun):
+	return False
 
+
+# def is_location(noun):
+# 	return True
+
+
+def chop_pp(pp):
+	prep = pp[0][0].lower()
+	np = chop_np(pp[1])
+	
+	if is_datetime(np['noun']):
+		prep_type = 'datetime'
+	else:
+		prep_type = 'location'
+		
+	return {
+		'prep': prep,
+		'np': np,
+		'prep_type': prep_type
+	}
+	
 
 def chop_np(np):
 	if not valid_np_children(np):
