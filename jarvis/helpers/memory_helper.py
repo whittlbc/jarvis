@@ -76,6 +76,12 @@ def format_memory(text):
 	ss_locations = {}
 	rs_locations = {}
 	rr_locations = {}
+	ssas_locations = {}
+	ssar_locations = {}
+	rsas_locations = {}
+	rsar_locations = {}
+	rras_locations = {}
+	rrar_locations = {}
 	
 	# handle the leading subject first
 	lead_subj_type = 'subj'
@@ -93,7 +99,7 @@ def format_memory(text):
 			'subj_b_uid': lead_subj_noun_uid,
 			'relation': 1	# change to class constants somewhere
 		}
-	
+		
 	for data in modeled_content:
 		
 		if leading_v_label == 'V*':
@@ -121,58 +127,124 @@ def format_memory(text):
 				action_uid = uid()
 				actions[action_uid] = {'verb': a['v']}
 				
-				action_subj = a['subject']
+				if a.get('subject'):
+					action_subj = a['subject']
+					action_subj_type = 'subj'
+					action_subj_noun_uid = uid()
+					
+					subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
+					
+					if action_subj['owner']:
+						action_subj_type = 'rel'
+						action_subj_owner_uid = uid()
+						subjects[action_subj_owner_uid] = {'orig': action_subj['owner']}
+						
+						action_subj_rel_uid = uid()
+						rels[action_subj_rel_uid] = {
+							'subj_a_uid': action_subj_owner_uid,
+							'subj_b_uid': action_subj_noun_uid,
+							'relation': 1  # change to class constants somewhere
+						}
+					
+					if lead_subj_type == 'subj' and action_subj_type == 'subj':
+						subj_subj_action_uid = uid()
+						subj_subj_actions[subj_subj_action_uid] = {
+							'subj_a_uid': lead_subj_noun_uid,
+							'subj_b_uid': action_subj_noun_uid,
+							'action_uid': action_uid
+						}
+						
+					elif lead_subj_type == 'rel' and action_subj_type == 'subj':
+						rel_subj_action_uid = uid()
+						rel_subj_actions[rel_subj_action_uid] = {
+							'rel_uid': lead_subj_rel_uid,
+							'subject_uid': action_subj_noun_uid,
+							'action_uid': action_uid,
+							'direction': 1
+						}
+						
+					elif lead_subj_type == 'subj' and action_subj_type == 'rel':
+						rel_subj_action_uid = uid()
+						rel_subj_actions[rel_subj_action_uid] = {
+							'rel_uid': action_subj_rel_uid,
+							'subject_uid': lead_subj_noun_uid,
+							'action_uid': action_uid,
+							'direction': -1
+						}
+						
+					else:
+						rel_rel_action_uid = uid()
+						rel_rel_actions[rel_rel_action_uid] = {
+							'rel_a_uid': lead_subj_rel_uid,
+							'rel_b_uid': action_subj_rel_uid,
+							'action_uid': action_uid
+						}
+					
+				elif a.get('location'):
+					if lead_subj_type == 'subj':
+						subj_subj_action_uid = uid()
+						subj_subj_actions[subj_subj_action_uid] = {
+							'subj_a_uid': lead_subj_noun_uid,
+							'subj_b_uid': -1,
+							'action_uid': action_uid
+						}
+					else:
+						rel_subj_action_uid = uid()
+						rel_subj_actions[rel_subj_action_uid] = {
+							'rel_uid': lead_subj_rel_uid,
+							'subject_uid': -1,
+							'action_uid': action_uid,
+							'direction': 1
+						}
+						
+					loc = a['location']
+					prep = loc['prep']
+					loc_subj = loc['subject']
+					
+					loc_subj_type = 'subj'
+					loc_subj_noun_uid = uid()
+					subjects[loc_subj_noun_uid] = {'orig': loc_subj['noun']}
+					
+					if loc_subj['owner']:
+						loc_subj_type = 'rel'
+						loc_subj_owner_uid = uid()
+						subjects[loc_subj_owner_uid] = {'orig': loc_subj['owner']}
+						
+						loc_subj_rel_uid = uid()
+						rels[loc_subj_rel_uid] = {
+							'subj_a_uid': loc_subj_owner_uid,
+							'subj_b_uid': loc_subj_noun_uid,
+							'relation': 1
+						}
 				
-				action_subj_type = 'subj'
-				action_subj_noun_uid = uid()
-				subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
-				
-				if action_subj['owner']:
-					action_subj_type = 'rel'
-					action_subj_owner_uid = uid()
-					subjects[action_subj_owner_uid] = {'orig': action_subj['owner']}
-					
-					action_subj_rel_uid = uid()
-					rels[action_subj_rel_uid] = {
-						'subj_a_uid': action_subj_owner_uid,
-						'subj_b_uid': action_subj_noun_uid,
-						'relation': 1  # change to class constants somewhere
-					}
-				
-				if lead_subj_type == 'subj' and action_subj_type == 'subj':
-					subj_subj_action_uid = uid()
-					subj_subj_actions[subj_subj_action_uid] = {
-						'subj_a_uid': lead_subj_noun_uid,
-						'subj_b_uid': action_subj_noun_uid,
-						'action_uid': action_uid
-					}
-					
-				elif lead_subj_type == 'rel' and action_subj_type == 'subj':
-					rel_subj_action_uid = uid()
-					rel_subj_actions[rel_subj_action_uid] = {
-						'rel_uid': lead_subj_rel_uid,
-						'subject_uid': action_subj_noun_uid,
-						'action_uid': action_uid,
-						'direction': 1
-					}
-					
-				elif lead_subj_type == 'subj' and action_subj_type == 'rel':
-					rel_subj_action_uid = uid()
-					rel_subj_actions[rel_subj_action_uid] = {
-						'rel_uid': action_subj_rel_uid,
-						'subject_uid': lead_subj_noun_uid,
-						'action_uid': action_uid,
-						'direction': -1
-					}
-					
-				else:
-					rel_rel_action_uid = uid()
-					rel_rel_actions[rel_rel_action_uid] = {
-						'rel_a_uid': lead_subj_rel_uid,
-						'rel_b_uid': action_subj_rel_uid,
-						'action_uid': action_uid
-					}
-					
+					if lead_subj_type == 'subj' and loc_subj_type == 'subj':  # ssas
+						ssas_locations[uid()] = {
+							'ssa_uid': subj_subj_action_uid,
+							'subject_uid': loc_subj_noun_uid,
+							'prep': prep
+						}
+						
+					elif lead_subj_type == 'subj' and loc_subj_type == 'rel':  # ssar
+						ssar_locations[uid()] = {
+							'ssa_uid': subj_subj_action_uid,
+							'rel_uid': loc_subj_rel_uid,
+							'prep': prep
+						}
+						
+					elif lead_subj_type == 'rel' and loc_subj_type == 'subj': # rsas
+						rsas_locations[uid()] = {
+							'rsa_uid': rel_subj_action_uid,
+							'subject_uid': loc_subj_noun_uid,
+							'prep': prep
+						}
+						
+					else: # rsar
+						rsar_locations[uid()] = {
+							'rsa_uid': rel_subj_action_uid,
+							'rel_uid': loc_subj_rel_uid,
+							'prep': prep
+						}
+		
 		else:
 			if data.get('subject'):
 				outer_subj = data['subject']
@@ -332,7 +404,7 @@ def format_memory(text):
 				else:
 					# description
 					print
-						
+					
 	# Subjects
 	subj_uid_id_map = upsert_subjects(subjects)
 	
@@ -351,6 +423,12 @@ def format_memory(text):
 	upsert_ss_locations(ss_locations, subj_uid_id_map)
 	upsert_rs_locations(rs_locations, subj_uid_id_map, rel_uid_id_map)
 	upsert_rr_locations(rr_locations, rel_uid_id_map)
+	upsert_ssas_locations(ssas_locations, subj_subj_action_uid_id_map, subj_uid_id_map)
+	upsert_ssar_locations(ssar_locations, subj_subj_action_uid_id_map, rel_uid_id_map)
+	upsert_rsas_locations(rsas_locations, rel_subj_action_uid_id_map, subj_uid_id_map)
+	upsert_rsar_locations(rsar_locations, rel_subj_action_uid_id_map, rel_uid_id_map)
+	upsert_rras_locations(rras_locations, rel_rel_action_uid_id_map, subj_uid_id_map)
+	upsert_rrar_locations(rrar_locations, rel_rel_action_uid_id_map, rel_uid_id_map)
 	
 	return True
 	
@@ -434,12 +512,23 @@ def upsert_actions(actions):
 def upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_map):
 	uid_id_map = {}
 	
+	upsert_info = {
+		'a_id': [subj_uid_id_map, 'subj_a_uid'],
+		'b_id': [subj_uid_id_map, 'subj_b_uid'],
+		'action_id': [actions_uid_id_map, 'action_uid']
+	}
+	
 	for k, v in subj_subj_actions.items():
-		data = {
-			'a_id': subj_uid_id_map[v['subj_a_uid']],
-			'b_id': subj_uid_id_map[v['subj_b_uid']],
-			'action_id': actions_uid_id_map[v['action_uid']]
-		}
+		data = {}
+		
+		for key, uid_info in upsert_info.items():
+			m, uid_key = uid_info
+			val = v[uid_key]
+			
+			if val == -1:
+				data[key] = -1
+			else:
+				data[key] = m[val]
 		
 		id = upsert(models.SUBJECT_SUBJECT_ACTION, data)
 		uid_id_map[k] = id
@@ -450,13 +539,23 @@ def upsert_subj_subj_actions(subj_subj_actions, actions_uid_id_map, subj_uid_id_
 def upsert_rel_subj_actions(rel_subj_actions, actions_uid_id_map, subj_uid_id_map, rel_uid_id_map):
 	uid_id_map = {}
 	
+	upsert_info = {
+		'rel_id': [rel_uid_id_map, 'rel_uid'],
+		'subject_id': [subj_uid_id_map, 'subject_uid'],
+		'action_id': [actions_uid_id_map, 'action_uid'],
+	}
+	
 	for k, v in rel_subj_actions.items():
-		data = {
-			'rel_id': rel_uid_id_map[v['rel_uid']],
-			'subject_id': subj_uid_id_map[v['subject_uid']],
-			'action_id': actions_uid_id_map[v['action_uid']],
-			'direction': v['direction']
-		}
+		data = {'direction': v['direction']}
+		
+		for key, uid_info in upsert_info.items():
+			m, uid_key = uid_info
+			val = v[uid_key]
+			
+			if val == -1:
+				data[key] = -1
+			else:
+				data[key] = m[val]
 		
 		id = upsert(models.REL_SUBJECT_ACTION, data)
 		uid_id_map[k] = id
@@ -529,6 +628,102 @@ def upsert_rr_locations(rr_locations, rel_uid_id_map):
 	return uid_id_map
 
 
+def upsert_ssas_locations(ssas_locations, subj_subj_action_uid_id_map, subj_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in ssas_locations.items():
+		data = {
+			'subject_subject_action_id': subj_subj_action_uid_id_map[v['ssa_uid']],
+			'subject_id': subj_uid_id_map[v['subject_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.SSAS_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+	
+	
+def upsert_ssar_locations(ssar_locations, subj_subj_action_uid_id_map, rel_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in ssar_locations.items():
+		data = {
+			'subject_subject_action_id': subj_subj_action_uid_id_map[v['ssa_uid']],
+			'rel_id': rel_uid_id_map[v['rel_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.SSAR_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+
+	
+def upsert_rsas_locations(rsas_locations, rel_subj_action_uid_id_map, subj_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in rsas_locations.items():
+		data = {
+			'rel_subject_action_id': rel_subj_action_uid_id_map[v['rsa_uid']],
+			'subject_id': subj_uid_id_map[v['subject_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.RSAS_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+	
+	
+def upsert_rsar_locations(rsar_locations, rel_subj_action_uid_id_map, rel_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in rsar_locations.items():
+		data = {
+			'rel_subject_action_id': rel_subj_action_uid_id_map[v['rsa_uid']],
+			'rel_id': rel_uid_id_map[v['rel_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.RSAR_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+
+
+def upsert_rras_locations(rras_locations, rel_rel_action_uid_id_map, subj_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in rras_locations.items():
+		data = {
+			'rel_rel_action_id': rel_rel_action_uid_id_map[v['rra_uid']],
+			'subject_id': subj_uid_id_map[v['subject_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.RRAS_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+
+
+def upsert_rrar_locations(rrar_locations, rel_rel_action_uid_id_map, rel_uid_id_map):
+	uid_id_map = {}
+	
+	for k, v in rrar_locations.items():
+		data = {
+			'rel_rel_action_id': rel_rel_action_uid_id_map[v['rra_uid']],
+			'rel_id': rel_uid_id_map[v['rel_uid']],
+			'prep': v['prep']
+		}
+		
+		id = upsert(models.RRAR_LOCATION, data)
+		uid_id_map[k] = id
+	
+	return uid_id_map
+	
+	
 def format_modeled_content(data):
 	modeled_data = []
 	content = {}

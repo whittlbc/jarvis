@@ -4,11 +4,11 @@ words = sp.words
 # Allowed tree formats for predicates when storing memories
 STORAGE_PREDICATE_FORMATS = [
 	# ['V(BE)'],
-	['V(BE)', 'NP'],
-	['V(BE)', 'PP'],
+	['V(BE)', 'NP'],  # Tyler is my brother
+	# ['V(BE)', 'PP'],  # I am in California
 	# ['V(BE)', 'NP', 'NP'],
-	['V(BE)', {'VP': ['V*']}],
-	['V(BE)', {'VP': ['V*', 'NP']}],
+	# ['V(BE)', {'VP': ['V*']}],  # I am playing
+	# ['V(BE)', {'VP': ['V*', 'NP']}],  # I am playing basketball
 	# ['V(BE)', {'VP': ['V*', 'PP']}],
 	# ['V(BE)', {'VP': ['V*', 'NP', 'PP']}],
 	# ['V(BE)', {'VP': ['V*', 'PP', 'NP']}],
@@ -25,9 +25,9 @@ STORAGE_PREDICATE_FORMATS = [
 	# ['V(BE)', {'VP': ['V*', {'S': [{'VP': ['TO', {'VP': ['V*', {'VP': ['V*', 'NN', 'PP']}]}]}]}]}],
 	['V(OWN)', 'NP'],
 	# ['V(OWN)', 'NP', 'NP'],
-	['V*'],
-	['V*', 'NP'],
-	# ['V*', 'PP'],
+	['V*'],  # I play
+	['V*', 'NP'],  # I play basketball
+	['V*', 'PP'],  # I play in the streets
 	# ['V*', 'NP', 'NP'],
 	# ['V*', {'S': [{'VP': ['TO', {'VP': ['V*']}]}]}],
 	# ['V*', {'S': [{'VP': ['TO', {'VP': ['V*', 'NP']}]}]}],
