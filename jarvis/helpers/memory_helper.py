@@ -1216,13 +1216,13 @@ def fetch_do_yn(q_content):
 	np = first_of_label(q_content, label=phrases.NOUN_PHRASE)
 	
 	if not np:
-		error('WH-DO query has no NP for some reason...{}'.format(tree))
+		error('DO query has no NP for some reason...{}'.format(tree))
 	
 	subject = np.values()[0]
 	sub_lists = [l for l in q_content if isinstance(l, list)]
 	
 	if not sub_lists:
-		error('WH-DO query has no VP for some reason...{}'.format(tree))
+		error('DO query has no VP for some reason...{}'.format(tree))
 	
 	action = {}
 	possession = None
@@ -1231,7 +1231,7 @@ def fetch_do_yn(q_content):
 	for child in sub_lists[0]:  # the first VP
 		label, val = child.items()[0]
 		
-		if label == 'V*' and not subject:
+		if label == 'V*':	# 12/24 - changed from `if label == 'V*' and not subject` to fix issue with "Do I play?" query.
 			action['v'] = val
 			
 		elif label == 'V(OWN)':
@@ -1533,7 +1533,7 @@ def handle_do_yn_action(subject, action):
 	actions_uid_query_map = action_query_map(actions)
 	
 	answer = 'No'
-	
+		
 	if lead_subj_type == 'subj':
 		if not action_subj_type:
 			ss_uid_info = {
@@ -1561,7 +1561,7 @@ def handle_do_yn_action(subject, action):
 				rel_uid_query_map,
 				dir=-1
 			)
-			
+						
 			if ssa_results or rsa_results['rsa_results']:
 				answer = 'Yes'
 			
