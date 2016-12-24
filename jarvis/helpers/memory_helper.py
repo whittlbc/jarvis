@@ -122,7 +122,7 @@ def format_memory(text):
 						'relation': 1  # change to class constants somewhere
 					}
 			
-			if data.get('action'):
+			elif data.get('action'):
 				a = data['action']
 				action_uid = uid()
 				actions[action_uid] = {'verb': a['v']}
@@ -916,7 +916,7 @@ def is_yes_no_query(tree, text):
 def handle_wh_query(tree, q_type):
 	wh_tree, q_tree = tree[0]
 	wh_info = chop_wh(wh_tree)
-	
+		
 	if not wh_info: return False
 	
 	if q_type == 'direct':
@@ -935,8 +935,10 @@ def handle_wh_query(tree, q_type):
 		
 		if leading_v_label == 'V*':
 			modeled_content = format_modeled_content(q_content)
+			
 		elif leading_v_label == 'V(BE)':
 			modeled_content = format_modeled_content(q_content[1:])
+			
 		else:
 			modeled_content = format_modeled_content(q_content[0][1:])
 		
@@ -1823,8 +1825,12 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	subj_subj_actions = {}
 	rel_subj_actions = {}
 	rel_rel_actions = {}
+	ss_locations = {}
+	rs_locations = {}
+	rr_locations = {}
 	
 	inner_subj_type = None
+	loc_subj_type = None
 		
 	for data in modeled_content:
 		if leading_v_label == 'V*':  # ACTION
@@ -1887,7 +1893,56 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 						'subj_b_uid': inner_subj_noun_uid,
 						'relation': 1
 					}
-
+					
+			elif data.get('location'):
+				loc = data['location']
+				prep = loc['prep']
+				loc_subj = loc['subject']
+				
+				loc_subj_type = 'subj'
+				loc_subj_noun_uid = uid()
+				subjects[loc_subj_noun_uid] = {'orig': loc_subj['noun']}
+				
+				if loc_subj['owner']:
+					loc_subj_type = 'rel'
+					loc_subj_owner_uid = uid()
+					subjects[loc_subj_owner_uid] = {'orig': loc_subj['owner']}
+					
+					loc_subj_rel_uid = uid()
+					rels[loc_subj_rel_uid] = {
+						'subj_a_uid': loc_subj_owner_uid,
+						'subj_b_uid': loc_subj_noun_uid,
+						'relation': 1
+					}
+				
+				if loc_subj_type == 'subj':
+					ss_locations[uid()] = {
+						'subj_a_uid': wh_info['wh'],
+						'subj_b_uid': loc_subj_noun_uid,
+						'prep': prep
+					}
+					
+					rs_locations[uid()] = {
+						'rel_uid': wh_info['wh'],
+						'subject_uid': loc_subj_noun_uid,
+						'prep': prep,
+						'direction': 1
+					}
+					
+				else:
+					rs_locations[uid()] = {
+						'rel_uid': loc_subj_rel_uid,
+						'subject_uid': wh_info['wh'],
+						'prep': prep,
+						'direction': -1
+					}
+				
+					rr_locations[uid()] = {
+						'rel_a_uid': wh_info['wh'],
+						'rel_b_uid': loc_subj_rel_uid,
+						'prep': prep
+					}
+	
 	result = []
 
 	subj_uid_query_map = subject_query_map(subjects)
@@ -2152,9 +2207,43 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					result = rs_results_pc
 					
 			else:
-				# description handler
-				print
+				# Handle location-related query
+				if loc_subj_type == 'subj':
+					ss_loc_results = find_models_through_ss_loc(
+						ss_locations.values()[0],
+						subj_uid_query_map
+					)
+					
+					rs_loc_results = find_models_through_rs_loc(
+						rs_locations.values()[0],
+						subj_uid_query_map,
+						rel_uid_query_map,
+						direction=1
+					)
+					
+					result += [corrected_owner(r) for r in ss_loc_results]
+									
+					for group in rs_loc_results['rels']:
+						result.append(format_possession([corrected_owner(g) for g in group]))
 
+				elif loc_subj_type == 'rel':
+					rs_loc_results = find_models_through_rs_loc(
+						rs_locations.values()[0],
+						subj_uid_query_map,
+						rel_uid_query_map,
+						direction=-1
+					)
+					
+					rr_loc_results = find_models_through_rr_loc(
+						rr_locations.values()[0],
+						rel_uid_query_map
+					)
+					
+					result += [corrected_owner(r) for r in rs_loc_results['subjects']]
+
+					for group in rr_loc_results:
+						result.append(format_possession([corrected_owner(g) for g in group]))
+		
 		elif leading_v_label == 'V(OWN)':
 			if inner_subj_type == 'subj':
 				r_uid_info = {
@@ -2542,6 +2631,132 @@ def find_models_through_rra(rra_info, actions_uid_query_map, rel_uid_query_map):
 			subject_ids = (r[1], r[2])
 			results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
 		
+	return results
+
+
+def find_models_through_ss_loc(ss_loc_info, subj_uid_query_map):
+	query_keys_map = {
+		'a_id': [subj_uid_query_map, 'subj_a_uid', models.SUBJECT],
+		'b_id': [subj_uid_query_map, 'subj_b_uid', models.SUBJECT]
+	}
+	
+	data = {'prep': ss_loc_info['prep']}
+	ss_loc_return_col = '*'
+	query_model = None
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = ss_loc_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			if val != '*':
+				ss_loc_return_col = key
+				query_model = model
+	
+	if not query_model:
+		return find(models.SS_LOCATION, data)
+	
+	ss_loc_query_prefix = select_where(models.SS_LOCATION, returning=ss_loc_return_col)
+	ss_loc_query = '{} {}'.format(ss_loc_query_prefix, keyify(data, connector=' AND '))
+	
+	results = find(query_model, {'id': '({})'.format(ss_loc_query)}, returning='orig')
+	
+	return [r[0] for r in results]
+
+
+def find_models_through_rs_loc(rs_loc_info, subj_uid_query_map, rel_uid_query_map, direction=None):
+	query_keys_map = {
+		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL],
+		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
+	}
+	
+	data = {'prep': rs_loc_info['prep']}
+	
+	if direction != None:
+		data['direction'] = direction
+	
+	rs_loc_return_col = '*'
+	query_model = None
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rs_loc_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			if val != '*':
+				rs_loc_return_col = key
+				query_model = model
+	
+	results = {
+		'subjects': [],
+		'rels': [],
+		'rs_loc_results': []
+	}
+	
+	if not query_model:
+		results['rs_loc_results'] = find(models.RS_LOCATION, data)
+	else:
+		rs_loc_query_prefix = select_where(models.RS_LOCATION, returning=rs_loc_return_col)
+		rs_loc_query = '{} {}'.format(rs_loc_query_prefix, keyify(data, connector=' AND '))
+		
+		if query_model == models.SUBJECT:
+			results['subjects'] = [r[0] for r in find(query_model, {'id': '({})'.format(rs_loc_query)}, returning='orig')]
+		else:
+			rels = find(query_model, {'id': '({})'.format(rs_loc_query), 'relation': 1})
+			rel_results = []
+			
+			if rels:
+				for r in rels:
+					subject_ids = (r[1], r[2])
+					rel_results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
+			
+			results['rels'] = rel_results
+	
+	return results
+
+
+def find_models_through_rr_loc(rr_loc_info, rel_uid_query_map):
+	query_keys_map = {
+		'a_id': [rel_uid_query_map, 'rel_a_uid', models.REL],
+		'b_id': [rel_uid_query_map, 'rel_b_uid', models.REL]
+	}
+	
+	data = {'prep': rr_loc_info['prep']}
+	rr_loc_return_col = '*'
+	query_model = None
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rr_loc_info[uid]
+		mini_query = m.get(val)
+		
+		if mini_query:
+			data[key] = '({})'.format(mini_query)
+		else:
+			if val != '*':
+				rr_loc_return_col = key
+				query_model = model
+	
+	if not query_model:
+		return find(models.RR_LOCATION, data)
+	
+	rr_loc_query_prefix = select_where(models.RR_LOCATION, returning=rr_loc_return_col)
+	rr_loc_query = '{} {}'.format(rr_loc_query_prefix, keyify(data, connector=' AND '))
+	
+	rels = find(query_model, {'id': '({})'.format(rr_loc_query), 'relation': 1})
+	results = []
+	
+	if rels:
+		for r in rels:
+			subject_ids = (r[1], r[2])
+			results.append([r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')])
+	
 	return results
 
 
