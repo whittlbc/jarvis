@@ -65,6 +65,7 @@ STORAGE_PREDICATE_FORMATS = [
 WH_RETRIEVAL_PREDICATE_FORMATS = [
 	[{'VP': ['V*']}],
 	[{'VP': ['V*', 'NP']}],
+	[{'VP': ['V*', 'PP']}],
 	['V(DO)', 'NP', {'VP': ['V*']}],
 	['V(DO)', 'NP', {'VP': ['V*', 'NP']}],
 	['V(DO)', 'NP', {'VP': ['V(OWN)', 'NP']}],

@@ -1828,6 +1828,12 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	ss_locations = {}
 	rs_locations = {}
 	rr_locations = {}
+	ssas_locations = {}
+	rsas_locations = {}
+	rras_locations = {}
+	ssar_locations = {}
+	rsar_locations = {}
+	rrar_locations = {}
 	
 	inner_subj_type = None
 	loc_subj_type = None
@@ -1837,41 +1843,145 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 			a = data['action']
 			action_uid = uid()
 			actions[action_uid] = {'verb': a['v']}
-			
-			action_subj = a.get('subject')
 			action_subj_type = None
+			loc_subj_type = None
 			
-			if action_subj:
-				action_subj_type = 'subj'
-				action_subj_noun_uid = uid()
-				subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
-				
-				if action_subj['owner']:
-					action_subj_type = 'rel'
-					action_subj_owner_uid = uid()
-					subjects[action_subj_owner_uid] = {'orig': action_subj['owner']}
+			if a.get('subject'):
+				action_subj = a['subject']
+			
+				if action_subj:
+					action_subj_type = 'subj'
+					action_subj_noun_uid = uid()
+					subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
 					
-					action_subj_rel_uid = uid()
-					rels[action_subj_rel_uid] = {
-						'subj_a_uid': action_subj_owner_uid,
-						'subj_b_uid': action_subj_noun_uid,
-						'relation': 1  # change to class constants somewhere
+					if action_subj['owner']:
+						action_subj_type = 'rel'
+						action_subj_owner_uid = uid()
+						subjects[action_subj_owner_uid] = {'orig': action_subj['owner']}
+						
+						action_subj_rel_uid = uid()
+						rels[action_subj_rel_uid] = {
+							'subj_a_uid': action_subj_owner_uid,
+							'subj_b_uid': action_subj_noun_uid,
+							'relation': 1  # change to class constants somewhere
+						}
+					
+					if action_subj_type == 'subj':
+						subj_subj_action_uid = uid()
+						subj_subj_actions[subj_subj_action_uid] = {
+							'subj_a_uid': wh_info['wh'],
+							'subj_b_uid': action_subj_noun_uid,
+							'action_uid': action_uid
+						}
+					else:
+						rel_subj_action_uid = uid()
+						rel_subj_actions[rel_subj_action_uid] = {
+							'rel_uid': action_subj_rel_uid,
+							'subject_uid': wh_info['wh'],
+							'action_uid': action_uid,
+							'direction': -1
+						}
+			
+			elif a.get('location'):
+				# First need to populate the action-based models
+				ssa_uid = uid()
+				subj_subj_actions[ssa_uid] = {
+					'subj_a_uid': '*',
+					'subj_b_uid': '*',
+					'action_uid': action_uid
+				}
+				
+				rsa_forward_uid = uid()
+				rel_subj_actions[rsa_forward_uid] = {
+					'rel_uid': '*',
+					'subject_uid': '*',
+					'action_uid': action_uid,
+					'direction': 1
+				}
+				
+				rsa_backward_uid = uid()
+				rel_subj_actions[rsa_backward_uid] = {
+					'rel_uid': '*',
+					'subject_uid': '*',
+					'action_uid': action_uid,
+					'direction': -1
+				}
+			
+				rra_uid = uid()
+				rel_rel_actions[rra_uid] = {
+					'rel_a_uid': '*',
+					'rel_b_uid': '*',
+					'action_uid': action_uid
+				}
+					
+				loc = a['location']
+				prep = loc['prep']
+				loc_subj = loc['subject']
+				
+				loc_subj_type = 'subj'
+				loc_subj_noun_uid = uid()
+				subjects[loc_subj_noun_uid] = {'orig': loc_subj['noun']}
+				
+				if loc_subj['owner']:
+					loc_subj_type = 'rel'
+					loc_subj_owner_uid = uid()
+					subjects[loc_subj_owner_uid] = {'orig': loc_subj['owner']}
+					
+					loc_subj_rel_uid = uid()
+					rels[loc_subj_rel_uid] = {
+						'subj_a_uid': loc_subj_owner_uid,
+						'subj_b_uid': loc_subj_noun_uid,
+						'relation': 1
+					}
+								
+				if loc_subj_type == 'subj':
+					ssas_locations[uid()] = {
+						'ssa_uid': ssa_uid,
+						'subject_uid': loc_subj_noun_uid,
+						'prep': prep,
+					}
+					
+					rsas_locations[uid()] = {
+						'rsa_uid': rsa_forward_uid,
+						'subject_uid': loc_subj_noun_uid,
+						'prep': prep
+					}
+					
+					rsas_locations[uid()] = {
+						'rsa_uid': rsa_backward_uid,
+						'subject_uid': loc_subj_noun_uid,
+						'prep': prep
+					}
+					
+					rras_locations[uid()] = {
+						'rra_uid': rra_uid,
+						'subject_uid': loc_subj_noun_uid,
+						'prep': prep,
 					}
 				
-				if action_subj_type == 'subj':
-					subj_subj_action_uid = uid()
-					subj_subj_actions[subj_subj_action_uid] = {
-						'subj_a_uid': wh_info['wh'],
-						'subj_b_uid': action_subj_noun_uid,
-						'action_uid': action_uid
-					}
 				else:
-					rel_subj_action_uid = uid()
-					rel_subj_actions[rel_subj_action_uid] = {
-						'rel_uid': action_subj_rel_uid,
-						'subject_uid': wh_info['wh'],
-						'action_uid': action_uid,
-						'direction': -1
+					ssar_locations[uid()] = {
+						'ssa_uid': ssa_uid,
+						'rel_uid': loc_subj_rel_uid,
+						'prep': prep,
+					}
+					
+					rsar_locations[uid()] = {
+						'rsa_uid': rsa_forward_uid,
+						'rel_uid': loc_subj_rel_uid,
+						'prep': prep
+					}
+					
+					rsar_locations[uid()] = {
+						'rsa_uid': rsa_backward_uid,
+						'rel_uid': loc_subj_rel_uid,
+						'prep': prep
+					}
+					
+					rrar_locations[uid()] = {
+						'rra_uid': rra_uid,
+						'rel_uid': loc_subj_rel_uid,
+						'prep': prep,
 					}
 		
 		else:  # V(BE) or V(OWN) relations
@@ -2010,67 +2120,143 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 			for group in rsa_results['rels'] + rra_results:
 				result.append(format_possession([corrected_owner(g) for g in group]))
 				
-		else:  # Ex: Who played?
-			# query SubjectSubjectAction, RelSubjectAction, RelRelAction
-			
-			action_uid = actions_uid_query_map.keys()[0]
-			
-			ss_uid_info = {
-				'subj_a_uid': wh_info['wh'],
-				'subj_b_uid': '*',
-				'action_uid': action_uid
-			}
-			
-			rs_uid_info_forward = {
-				'rel_uid': wh_info['wh'],
-				'subject_uid': '*',
-				'action_uid': action_uid
-			}
-			
-			rs_uid_info_backward = {
-				'rel_uid': '*',
-				'subject_uid': wh_info['wh'],
-				'action_uid': action_uid
-			}
-			
-			rr_uid_info = {
-				'rel_a_uid': wh_info['wh'],
-				'rel_b_uid': '*',
-				'action_uid': action_uid
-			}
-			
-			ssa_results = find_models_through_ssa(
-				ss_uid_info,
-				actions_uid_query_map,
-				subj_uid_query_map
-			)
-			
-			rsa_results_forward = find_models_through_rsa(
-				rs_uid_info_forward,
-				actions_uid_query_map,
-				subj_uid_query_map,
-				rel_uid_query_map,
-				dir=1,
-			)
-			
-			rsa_results_backward = find_models_through_rsa(
-				rs_uid_info_backward,
-				actions_uid_query_map,
-				subj_uid_query_map,
-				rel_uid_query_map,
-				dir=-1,
-			)
-			
-			rra_results = find_models_through_rra(
-				rr_uid_info,
-				actions_uid_query_map,
-				rel_uid_query_map
-			)
-	
-			result += [corrected_owner(r) for r in ssa_results]
-			
-			for group in rsa_results_forward['rels'] + rsa_results_backward['rels'] + rra_results:
-				result.append(format_possession([corrected_owner(g) for g in group]))
+		else:
+			ssa_uid_query_map = ssa_query_map(subj_subj_actions, actions_uid_query_map, subj_uid_query_map)
+			rsa_uid_query_map = rsa_query_map(rel_subj_actions, actions_uid_query_map, subj_uid_query_map, rel_uid_query_map)
+			rra_uid_query_map = rra_query_map(rel_rel_actions, actions_uid_query_map, rel_uid_query_map)
+
+			if loc_subj_type == 'subj':
+				ssas_loc_results = find_models_through_ssas_loc(
+					ssas_locations.values()[0],
+					ssa_uid_query_map,
+					subj_uid_query_map,
+					return_model=models.SUBJECT,
+					return_pos='a',
+					return_key='orig'
+				)
+				
+				# rsas_loc_rel_results = find_models_through_rsas_loc(
+				# 	[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == 1][0],
+				# 	rsa_uid_query_map,
+				# 	subj_uid_query_map,
+				# 	return_model=models.REL
+				# )
+				#
+				# rsas_loc_subj_results = find_models_through_rsas_loc(
+				# 	[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == -1][0],
+				# 	rsa_uid_query_map,
+				# 	subj_uid_query_map,
+				# 	return_model=models.SUBJECT
+				# )
+				#
+				# rras_loc_results = find_models_through_rras_loc(
+				# 	rras_locations.values()[0],
+				# 	rra_uid_query_map,
+				# 	subj_uid_query_map,
+				# 	return_model=models.REL,
+				# 	return_pos='a'
+				# )
+				
+				result += [corrected_owner(r) for r in ssas_loc_results]
+				# result += rsas_loc_rel_results
+				# result += rsas_loc_subj_results
+				# result += rras_loc_results
+				
+			elif loc_subj_type == 'rel':
+				ssar_loc_results = find_models_through_ssar_loc(
+					ssar_locations.values()[0],
+					ssa_uid_query_map,
+					rel_uid_query_map,
+					return_model=models.SUBJECT,
+					return_pos='a'
+				)
+				
+				rsar_loc_rel_results = find_models_through_rsar_loc(
+					[r for r in rsar_locations.values() if r['direction'] == 1][0],
+					rsa_uid_query_map,
+					rel_uid_query_map,
+					return_model=models.REL
+				)
+				
+				rsar_loc_subj_results = find_models_through_rsar_loc(
+					[r for r in rsar_locations.values() if r['direction'] == -1][0],
+					rsa_uid_query_map,
+					rel_uid_query_map,
+					return_model=models.SUBJECT
+				)
+
+				rrar_loc_results = find_models_through_rrar_loc(
+					rrar_locations.values()[0],
+					rra_uid_query_map,
+					rel_uid_query_map,
+					return_model=models.REL,
+					return_pos='a'
+				)
+				
+				result += ssar_loc_results
+				result += rsar_loc_rel_results
+				result += rsar_loc_subj_results
+				result += rrar_loc_results
+				
+			else:
+				action_uid = actions_uid_query_map.keys()[0]
+				
+				ss_uid_info = {
+					'subj_a_uid': wh_info['wh'],
+					'subj_b_uid': '*',
+					'action_uid': action_uid
+				}
+				
+				rs_uid_info_forward = {
+					'rel_uid': wh_info['wh'],
+					'subject_uid': '*',
+					'action_uid': action_uid
+				}
+				
+				rs_uid_info_backward = {
+					'rel_uid': '*',
+					'subject_uid': wh_info['wh'],
+					'action_uid': action_uid
+				}
+				
+				rr_uid_info = {
+					'rel_a_uid': wh_info['wh'],
+					'rel_b_uid': '*',
+					'action_uid': action_uid
+				}
+				
+				ssa_results = find_models_through_ssa(
+					ss_uid_info,
+					actions_uid_query_map,
+					subj_uid_query_map
+				)
+				
+				rsa_results_forward = find_models_through_rsa(
+					rs_uid_info_forward,
+					actions_uid_query_map,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					dir=1,
+				)
+				
+				rsa_results_backward = find_models_through_rsa(
+					rs_uid_info_backward,
+					actions_uid_query_map,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					dir=-1,
+				)
+				
+				rra_results = find_models_through_rra(
+					rr_uid_info,
+					actions_uid_query_map,
+					rel_uid_query_map
+				)
+		
+				result += [corrected_owner(r) for r in ssa_results]
+				
+				for group in rsa_results_forward['rels'] + rsa_results_backward['rels'] + rra_results:
+					result.append(format_possession([corrected_owner(g) for g in group]))
 	
 	else:
 		if leading_v_label == 'V(BE)':
@@ -2366,6 +2552,87 @@ def action_query_map(actions):
 	return uid_query_map
 
 
+def ssa_query_map(subj_subj_actions, actions_uid_query_map, subj_uid_query_map):
+	uid_query_map = {}
+	query = select_where(models.SUBJECT_SUBJECT_ACTION, returning='id')
+	
+	query_keys_map = {
+		'a_id': [subj_uid_query_map, 'subj_a_uid'],
+		'b_id': [subj_uid_query_map, 'subj_b_uid'],
+		'action_id': [actions_uid_query_map, 'action_uid']
+	}
+	
+	for k, v in subj_subj_actions.items():
+		data = {}
+		
+		for key, info in query_keys_map.items():
+			m, uid = info
+			val = v[uid]
+			
+			if m.get(val):
+				data[key] = '({})'.format(m[val])
+		
+		if data:
+			uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+
+	return uid_query_map
+
+
+def rsa_query_map(rel_subj_actions, actions_uid_query_map, subj_uid_query_map, rel_uid_query_map):
+	uid_query_map = {}
+	query = select_where(models.REL_SUBJECT_ACTION, returning='id')
+	
+	query_keys_map = {
+		'rel_id': [rel_uid_query_map, 'rel_uid'],
+		'subject_id': [subj_uid_query_map, 'subject_uid'],
+		'action_id': [actions_uid_query_map, 'action_uid']
+	}
+	
+	for k, v in rel_subj_actions.items():
+		data = {}
+		
+		if v.get('direction'):
+			data['direction'] = v['direction']
+		
+		for key, info in query_keys_map.items():
+			m, uid = info
+			val = v[uid]
+			
+			if m.get(val):
+				data[key] = '({})'.format(m[val])
+				
+		if data:
+			uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+	
+	return uid_query_map
+	
+	
+def rra_query_map(rel_rel_actions, actions_uid_query_map, rel_uid_query_map):
+	uid_query_map = {}
+	query = select_where(models.REL_REL_ACTION, returning='id')
+	
+	query_keys_map = {
+		'a_id': [rel_uid_query_map, 'rel_a_uid'],
+		'b_id': [rel_uid_query_map, 'rel_b_uid'],
+		'action_id': [actions_uid_query_map, 'action_uid']
+	}
+	
+	for k, v in rel_rel_actions.items():
+		data = {}
+		
+		for key, info in query_keys_map.items():
+			m, uid = info
+			val = v[uid]
+			
+			if m.get(val):
+				data[key] = '({})'.format(m[val])
+		
+		if data:
+			uid_query_map[k] = '{} {}'.format(query, keyify(data, connector=' AND '))
+	
+	return uid_query_map
+
+	
 def find_models_through_r(r_info, subj_uid_query_map, relation=None):
 	query_keys_map = {
 		'a_id': [subj_uid_query_map, 'subj_a_uid', models.SUBJECT],
@@ -2759,6 +3026,56 @@ def find_models_through_rr_loc(rr_loc_info, rel_uid_query_map):
 	
 	return results
 
+
+def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_query_map, return_model=None, return_pos=None, return_key=None):
+	query_keys_map = {
+		'subject_subject_action_id': [ssa_uid_query_map, 'ssa_uid', models.SUBJECT_SUBJECT_ACTION],
+		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
+	}
+	
+	data = {'prep': ssas_loc_info['prep']}
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = ssas_loc_info[uid]
+		
+		if m.get(val):
+			data[key] = '({})'.format(m[val])
+	
+	ssas_location_results = find(models.SSAS_LOCATION, data)
+	
+	results = []
+	if ssas_location_results:
+		for result in ssas_location_results:
+			ssa_id = result[1]
+			
+			ssa_inner_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning='{}_id'.format(return_pos))
+			ssa_inner_query = '{} {}'.format(ssa_inner_query_prefix, keyify({'id': ssa_id}))
+			
+			results += find(return_model, {'id': '({})'.format(ssa_inner_query)}, returning=return_key)
+	
+	return [r[0] for r in results]
+
+
+def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_query_map, return_model=None):
+	return []
+	
+	
+def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_query_map, return_model=None, return_pos=None):
+	return []
+	
+	
+def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query_map, return_model=None, return_pos=None):
+	return []
+	
+	
+def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query_map, return_model=None):
+	return []
+
+
+def find_models_through_rrar_loc(rrar_loc_info, rra_uid_query_map, rel_uid_query_map, return_model=None, return_pos=None):
+	return []
+	
 
 def handle_yes_no_query(t):
 	q_tree = t[0]
