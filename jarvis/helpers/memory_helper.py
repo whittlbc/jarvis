@@ -2130,37 +2130,39 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 					ssas_locations.values()[0],
 					ssa_uid_query_map,
 					subj_uid_query_map,
-					return_model=models.SUBJECT,
-					return_pos='a',
-					return_key='orig'
+					return_pos='a'
 				)
 				
-				# rsas_loc_rel_results = find_models_through_rsas_loc(
-				# 	[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == 1][0],
-				# 	rsa_uid_query_map,
-				# 	subj_uid_query_map,
-				# 	return_model=models.REL
-				# )
-				#
-				# rsas_loc_subj_results = find_models_through_rsas_loc(
-				# 	[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == -1][0],
-				# 	rsa_uid_query_map,
-				# 	subj_uid_query_map,
-				# 	return_model=models.SUBJECT
-				# )
-				#
-				# rras_loc_results = find_models_through_rras_loc(
-				# 	rras_locations.values()[0],
-				# 	rra_uid_query_map,
-				# 	subj_uid_query_map,
-				# 	return_model=models.REL,
-				# 	return_pos='a'
-				# )
+				rsas_loc_rel_results = find_models_through_rsas_loc(
+					[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == 1][0],
+					rsa_uid_query_map,
+					subj_uid_query_map,
+					return_model=models.REL
+				)
+
+				rsas_loc_subj_results = find_models_through_rsas_loc(
+					[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == -1][0],
+					rsa_uid_query_map,
+					subj_uid_query_map,
+					return_model=models.SUBJECT
+				)
+				
+				rras_loc_results = find_models_through_rras_loc(
+					rras_locations.values()[0],
+					rra_uid_query_map,
+					subj_uid_query_map,
+					return_pos='a'
+				)
 				
 				result += [corrected_owner(r) for r in ssas_loc_results]
-				# result += rsas_loc_rel_results
-				# result += rsas_loc_subj_results
-				# result += rras_loc_results
+			
+				for group in rsas_loc_rel_results:
+					result.append(format_possession([corrected_owner(g) for g in group]))
+			
+				result += [corrected_owner(r) for r in rsas_loc_subj_results]
+			
+				for group in rras_loc_results:
+					result.append(format_possession([corrected_owner(g) for g in group]))
 				
 			elif loc_subj_type == 'rel':
 				ssar_loc_results = find_models_through_ssar_loc(
@@ -3027,7 +3029,7 @@ def find_models_through_rr_loc(rr_loc_info, rel_uid_query_map):
 	return results
 
 
-def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_query_map, return_model=None, return_pos=None, return_key=None):
+def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_query_map, return_pos=None):
 	query_keys_map = {
 		'subject_subject_action_id': [ssa_uid_query_map, 'ssa_uid', models.SUBJECT_SUBJECT_ACTION],
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
@@ -3052,19 +3054,92 @@ def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_quer
 			ssa_inner_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning='{}_id'.format(return_pos))
 			ssa_inner_query = '{} {}'.format(ssa_inner_query_prefix, keyify({'id': ssa_id}))
 			
-			results += find(return_model, {'id': '({})'.format(ssa_inner_query)}, returning=return_key)
+			results += find(models.SUBJECT, {'id': '({})'.format(ssa_inner_query)}, returning='orig')
 	
 	return [r[0] for r in results]
 
 
 def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_query_map, return_model=None):
-	return []
+	query_keys_map = {
+		'rel_subject_action_id': [rsa_uid_query_map, 'rsa_uid', models.REL_SUBJECT_ACTION],
+		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
+	}
 	
+	data = {'prep': rsas_loc_info['prep']}
 	
-def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_query_map, return_model=None, return_pos=None):
-	return []
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rsas_loc_info[uid]
+		
+		if m.get(val):
+			data[key] = '({})'.format(m[val])
 	
+	rsas_location_results = find(models.RSAS_LOCATION, data)
 	
+	results = []
+	if rsas_location_results:
+		for result in rsas_location_results:
+			rsa_id = result[1]
+			
+			if return_model == models.REL:
+				rel_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='rel_id')[0][0]
+				rel = find(models.REL, {'id': rel_id})
+				
+				subj_a_id = rel[0][1]
+				subj_b_id = rel[0][2]
+				
+				a = find(models.SUBJECT, {'id': subj_a_id}, returning='orig')
+				b = find(models.SUBJECT, {'id': subj_b_id}, returning='orig')
+				
+				results += [a[0], b[0]]
+			
+			elif return_model == models.SUBJECT:
+				subject_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='subject_id')[0][0]
+				subject = find(models.SUBJECT, {'id': subject_id}, returning='orig')
+				
+				results += subject[0][0]
+			
+			else:
+				error('Return model invalid: {}'.format(return_model))
+	
+	return results
+
+	
+def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_query_map, return_pos=None):
+	query_keys_map = {
+		'rel_rel_action_id': [rra_uid_query_map, 'ssa_uid', models.REL_REL_ACTION],
+		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
+	}
+	
+	data = {'prep': rras_loc_info['prep']}
+	
+	for key, info in query_keys_map.items():
+		m, uid, model = info
+		val = rras_loc_info[uid]
+		
+		if m.get(val):
+			data[key] = '({})'.format(m[val])
+	
+	rras_location_results = find(models.RRAS_LOCATION, data)
+	
+	results = []
+	if rras_location_results:
+		for result in rras_location_results:
+			rra_id = result[1]
+			rel_id = find(models.REL_REL_ACTION, {'id': rra_id}, returning='{}_id'.format(return_pos))[0][0]
+			rel = find(models.REL, {'id': rel_id})
+			
+			subj_a_id = rel[0][1]
+			subj_b_id = rel[0][2]
+			
+			a = find(models.SUBJECT, {'id': subj_a_id}, returning='orig')
+			b = find(models.SUBJECT, {'id': subj_b_id}, returning='orig')
+			
+			results += [a[0], b[0]]
+	
+	return results
+
+
 def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query_map, return_model=None, return_pos=None):
 	return []
 	
