@@ -1064,43 +1064,52 @@ def handle_whadvp_do_action(subject, action, wh_info):
 			'prep': '*'
 		}
 		
+		ssar_loc_info = {
+			'ssa_uid': ssa_uid,
+			'rel_uid': '*',
+			'prep': '*'
+		}
+		
 		ssas_loc_results = find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_query_map)
-	
+		ssar_loc_results = find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query_map)
+		
 		result += ssas_loc_results
 		
+		for info in ssar_loc_results:
+			result.append('{} {}'.format(info['prep'], format_possession([corrected_owner(info['owner']), info['noun']])))
 		
+	else:  # lead_subj_type = 'rel'
+		# assuming that there's no subject associated with the action...
+		# we'll be looking for both ssas_locations and ssar_locations where b_id = -1 in the ssa model
+		rsa_uid = uid()
+		rel_subj_actions[rsa_uid] = {
+			'rel_uid': lead_subj_rel_uid,
+			'subject_uid': -1,
+			'action_uid': action_uid,
+			'direction': 1
+		}
 		
-	# else:  # lead_subj_type = 'rel'
-	# 	rs_uid_info = {
-	# 		'rel_uid': lead_subj_rel_uid,
-	# 		'subject_uid': wh_info['wh'],
-	# 		'action_uid': action_uid
-	# 	}
-	#
-	# 	rr_uid_info = {
-	# 		'rel_a_uid': lead_subj_rel_uid,
-	# 		'rel_b_uid': wh_info['wh'],
-	# 		'action_uid': action_uid
-	# 	}
-	#
-	# 	rsa_results = find_models_through_rsa(
-	# 		rs_uid_info,
-	# 		actions_uid_query_map,
-	# 		subj_uid_query_map,
-	# 		rel_uid_query_map,
-	# 		dir=1
-	# 	)
-	#
-	# 	rra_results = find_models_through_rra(
-	# 		rr_uid_info,
-	# 		actions_uid_query_map,
-	# 		rel_uid_query_map
-	# 	)
-	#
-	# 	result += [corrected_owner(r) for r in rsa_results['subjects']]
-	#
-	# 	for group in rra_results:
-	# 		result.append(format_possession([corrected_owner(g) for g in group]))
+		rsa_uid_query_map = rsa_query_map(rel_subj_actions, actions_uid_query_map, subj_uid_query_map, rel_uid_query_map)
+		
+		rsas_loc_info = {
+			'rsa_uid': rsa_uid,
+			'subject_uid': '*',
+			'prep': '*'
+		}
+		
+		rsar_loc_info = {
+			'rsa_uid': rsa_uid,
+			'rel_uid': '*',
+			'prep': '*'
+		}
+		
+		rsas_loc_results = find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_query_map)
+		rsar_loc_results = find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query_map)
+		
+		result += rsas_loc_results
+	
+		for info in rsar_loc_results:
+			result.append('{} {}'.format(info['prep'], format_possession([corrected_owner(info['owner']), info['noun']])))
 	
 	return and_join(result)
 
@@ -2261,14 +2270,14 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				)
 				
 				rsar_loc_rel_results = find_models_through_rsar_loc(
-					[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == 1][0],
+					[r for r in rsar_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == 1][0],
 					rsa_uid_query_map,
 					rel_uid_query_map,
 					return_model=models.REL
 				)
 				
 				rsar_loc_subj_results = find_models_through_rsar_loc(
-					[r for r in rsas_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == -1][0],
+					[r for r in rsar_locations.values() if rel_subj_actions[r['rsa_uid']]['direction'] == -1][0],
 					rsa_uid_query_map,
 					rel_uid_query_map,
 					return_model=models.SUBJECT
@@ -2693,7 +2702,9 @@ def rsa_query_map(rel_subj_actions, actions_uid_query_map, subj_uid_query_map, r
 			m, uid = info
 			val = v[uid]
 			
-			if m.get(val):
+			if val == -1:
+				data[key] = -1
+			elif m.get(val):
 				data[key] = '({})'.format(m[val])
 				
 		if data:
@@ -3165,7 +3176,11 @@ def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_quer
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
 	}
 	
-	data = {'prep': rsas_loc_info['prep']}
+	data = {}
+	prep = rsas_loc_info['prep']
+	
+	if prep and prep != '*':
+		data['prep'] = prep
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -3178,27 +3193,32 @@ def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_quer
 	
 	results = []
 	if rsas_location_results:
-		for result in rsas_location_results:
-			rsa_id = result[1]
-			
-			if return_model == models.REL:
-				rel_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='rel_id')[0][0]
-				rel = find(models.REL, {'id': rel_id})
+		if rsas_loc_info['subject_uid'] == '*':
+			for result in rsas_location_results:
+				subject = find(models.SUBJECT, {'id': result[2]}, returning='orig')[0][0]
+				results.append('{} the {}'.format(result[3], subject))
+		else:
+			for result in rsas_location_results:
+				rsa_id = result[1]
 				
-				subj_a_id = rel[0][1]
-				subj_b_id = rel[0][2]
+				if return_model == models.REL:
+					rel_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='rel_id')[0][0]
+					rel = find(models.REL, {'id': rel_id})
+					
+					subj_a_id = rel[0][1]
+					subj_b_id = rel[0][2]
+					
+					subjects = find(models.SUBJECT, {'id': [subj_a_id, subj_b_id]}, returning='orig')
+					results.append([subjects[0][0], subjects[1][0]])
 				
-				subjects = find(models.SUBJECT, {'id': [subj_a_id, subj_b_id]}, returning='orig')
-				results.append([subjects[0][0], subjects[1][0]])
-			
-			elif return_model == models.SUBJECT:
-				subject_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='subject_id')[0][0]
-				subject = find(models.SUBJECT, {'id': subject_id}, returning='orig')
+				elif return_model == models.SUBJECT:
+					subject_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='subject_id')[0][0]
+					subject = find(models.SUBJECT, {'id': subject_id}, returning='orig')
+					
+					results += subject[0][0]
 				
-				results += subject[0][0]
-			
-			else:
-				error('Return model invalid: {}'.format(return_model))
+				else:
+					error('Return model invalid: {}'.format(return_model))
 	
 	return results
 
@@ -3209,7 +3229,11 @@ def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_quer
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
 	}
 	
-	data = {'prep': rras_loc_info['prep']}
+	data = {}
+	prep = rras_loc_info['prep']
+	
+	if prep and prep != '*':
+		data['prep'] = prep
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -3242,7 +3266,11 @@ def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query
 		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL]
 	}
 	
-	data = {'prep': ssas_loc_info['prep']}
+	data = {}
+	prep = ssar_loc_info['prep']
+	
+	if prep and prep != '*':
+		data['prep'] = prep
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -3255,13 +3283,21 @@ def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query
 	
 	results = []
 	if ssar_location_results:
-		for result in ssar_location_results:
-			ssa_id = result[1]
-			
-			ssa_inner_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning='{}_id'.format(return_pos))
-			ssa_inner_query = '{} {}'.format(ssa_inner_query_prefix, keyify({'id': ssa_id}))
-			
-			results += find(models.SUBJECT, {'id': '({})'.format(ssa_inner_query)}, returning='orig')
+		if ssar_loc_info['rel_uid'] == '*':
+			for result in ssar_location_results:
+				rel = find(models.REL, {'id': result[2]})[0]
+				subject_ids = (rel[1], rel[2])
+				owner, noun = [r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')]
+				
+				results.append([{'prep': result[3], 'owner': owner, 'noun': noun}])
+		else:
+			for result in ssar_location_results:
+				ssa_id = result[1]
+				
+				ssa_inner_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning='{}_id'.format(return_pos))
+				ssa_inner_query = '{} {}'.format(ssa_inner_query_prefix, keyify({'id': ssa_id}))
+				
+				results += find(models.SUBJECT, {'id': '({})'.format(ssa_inner_query)}, returning='orig')
 	
 	return [r[0] for r in results]
 
@@ -3272,7 +3308,11 @@ def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query
 		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL]
 	}
 	
-	data = {'prep': rsar_loc_info['prep']}
+	data = {}
+	prep = rsar_loc_info['prep']
+	
+	if prep and prep != '*':
+		data['prep'] = prep
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -3285,27 +3325,35 @@ def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query
 	
 	results = []
 	if rsar_location_results:
-		for result in rsar_location_results:
-			rsa_id = result[1]
-			
-			if return_model == models.REL:
-				rel_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='rel_id')[0][0]
-				rel = find(models.REL, {'id': rel_id})
+		if rsar_loc_info['rel_uid'] == '*':
+			for result in rsar_location_results:
+				rel = find(models.REL, {'id': result[2]})[0]
+				subject_ids = (rel[1], rel[2])
+				owner, noun = [r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')]
 				
-				subj_a_id = rel[0][1]
-				subj_b_id = rel[0][2]
+				results.append({'prep': result[3], 'owner': owner, 'noun': noun})
+		else:
+			for result in rsar_location_results:
+				rsa_id = result[1]
 				
-				subjects = find(models.SUBJECT, {'id': [subj_a_id, subj_b_id]}, returning='orig')
-				results.append([subjects[0][0], subjects[1][0]])
-			
-			elif return_model == models.SUBJECT:
-				subject_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='subject_id')[0][0]
-				subject = find(models.SUBJECT, {'id': subject_id}, returning='orig')
+				if return_model == models.REL:
+					rel_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='rel_id')[0][0]
+					rel = find(models.REL, {'id': rel_id})
+					
+					subj_a_id = rel[0][1]
+					subj_b_id = rel[0][2]
+					
+					subjects = find(models.SUBJECT, {'id': [subj_a_id, subj_b_id]}, returning='orig')
+					results.append([subjects[0][0], subjects[1][0]])
 				
-				results += subject[0][0]
-			
-			else:
-				error('Return model invalid: {}'.format(return_model))
+				elif return_model == models.SUBJECT:
+					subject_id = find(models.REL_SUBJECT_ACTION, {'id': rsa_id}, returning='subject_id')[0][0]
+					subject = find(models.SUBJECT, {'id': subject_id}, returning='orig')
+					
+					results += subject[0][0]
+				
+				else:
+					error('Return model invalid: {}'.format(return_model))
 	
 	return results
 
@@ -3316,8 +3364,12 @@ def find_models_through_rrar_loc(rrar_loc_info, rra_uid_query_map, rel_uid_query
 		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL]
 	}
 	
-	data = {'prep': rrar_loc_info['prep']}
+	data = {}
+	prep = rrar_loc_info['prep']
 	
+	if prep and prep != '*':
+		data['prep'] = prep
+		
 	for key, info in query_keys_map.items():
 		m, uid, model = info
 		val = rrar_loc_info[uid]
