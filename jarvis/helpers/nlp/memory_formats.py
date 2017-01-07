@@ -60,7 +60,6 @@ STORAGE_PREDICATE_FORMATS = [
 	# ['MD', {'VP': ['V*', {'S': [{'VP': ['TO', {'VP': ['V*', {'VP': ['V*', 'NP', 'PP']}]}]}]}]}]
 ]
 
-
 # Allowed tree formats for predicates when retrieving a memory with a 'WH' question
 WH_RETRIEVAL_PREDICATE_FORMATS = [
 	[{'VP': ['V*']}],

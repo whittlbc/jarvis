@@ -964,7 +964,7 @@ def fetch_wh_do(q_content, wh_info):
 	
 	action = {}
 	possession = None
-	saw_v_own = False
+	has_v_own = False
 	
 	for child in sub_lists[0]:  # the first VP
 		label, val = child.items()[0]
@@ -973,13 +973,13 @@ def fetch_wh_do(q_content, wh_info):
 			action['v'] = val
 		
 		elif label == 'V(OWN)':
-			saw_v_own = True
+			has_v_own = True
 		
 		elif label == phrases.NOUN_PHRASE and action:
 			action['subject'] = val
 		
 		# Not supporting the use of NP's after WH-DO-OWN's yet
-		# elif label == phrases.NOUN_PHRASE and saw_v_own:
+		# elif label == phrases.NOUN_PHRASE and has_v_own:
 		# 	possession = val
 	
 	if action:
@@ -997,7 +997,7 @@ def fetch_wh_do(q_content, wh_info):
 			if result: 
 				return result
 			
-	elif saw_v_own:
+	elif has_v_own:
 		if wh_info['wh'] in ['when', 'where']:
 			handle_method = handle_whadvp_do_possession
 		else:
@@ -1012,12 +1012,100 @@ def fetch_wh_do(q_content, wh_info):
 	return None
 
 
+# Ex: Where do I play? --> in the streets
+# ** ONLY FOCUSING ON WHERE QUERIES FOR NOW **
 def handle_whadvp_do_action(subject, action, wh_info):
-	# TODO: errthang
-	return None
+	subjects = {}
+	rels = {}
+	actions = {}
+	subj_subj_actions = {}
+	rel_subj_actions = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
+		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1
+		}
+	
+	action_uid = uid()
+	actions[action_uid] = {'verb': action['v']}
+	
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	actions_uid_query_map = action_query_map(actions)
+	
+	result = []
+	
+	if lead_subj_type == 'subj':
+		# assuming that there's no subject associated with the action...
+		# we'll be looking for both ssas_locations and ssar_locations where b_id = -1 in the ssa model
+		ssa_uid = uid()
+		subj_subj_actions[ssa_uid] = {
+			'subj_a_uid': lead_subj_noun_uid,
+			'subj_b_uid': -1,
+			'action_uid': action_uid
+		}
+		
+		ssa_uid_query_map = ssa_query_map(subj_subj_actions, actions_uid_query_map, subj_uid_query_map)
+		
+		ssas_loc_info = {
+			'ssa_uid': ssa_uid,
+			'subject_uid': '*',
+			'prep': '*'
+		}
+		
+		ssas_loc_results = find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_query_map)
+	
+		result += ssas_loc_results
+		
+		
+		
+	# else:  # lead_subj_type = 'rel'
+	# 	rs_uid_info = {
+	# 		'rel_uid': lead_subj_rel_uid,
+	# 		'subject_uid': wh_info['wh'],
+	# 		'action_uid': action_uid
+	# 	}
+	#
+	# 	rr_uid_info = {
+	# 		'rel_a_uid': lead_subj_rel_uid,
+	# 		'rel_b_uid': wh_info['wh'],
+	# 		'action_uid': action_uid
+	# 	}
+	#
+	# 	rsa_results = find_models_through_rsa(
+	# 		rs_uid_info,
+	# 		actions_uid_query_map,
+	# 		subj_uid_query_map,
+	# 		rel_uid_query_map,
+	# 		dir=1
+	# 	)
+	#
+	# 	rra_results = find_models_through_rra(
+	# 		rr_uid_info,
+	# 		actions_uid_query_map,
+	# 		rel_uid_query_map
+	# 	)
+	#
+	# 	result += [corrected_owner(r) for r in rsa_results['subjects']]
+	#
+	# 	for group in rra_results:
+	# 		result.append(format_possession([corrected_owner(g) for g in group]))
+	
+	return and_join(result)
 
 
-# Ex: What do I play?
+# Ex: What do I play? --> basketball
 # Use subject as leading subject and assume that action doesn't have a 'subject' property
 # TODO: Still need to figure out how to deal with possessive wh_info's
 def handle_whnp_do_action(subject, action, wh_info):
@@ -1038,7 +1126,7 @@ def handle_whnp_do_action(subject, action, wh_info):
 		rels[lead_subj_rel_uid] = {
 			'subj_a_uid': lead_subj_owner_uid,
 			'subj_b_uid': lead_subj_noun_uid,
-			'relation': 1  # change to class constants somewhere
+			'relation': 1
 		}
 	
 	action_uid = uid()
@@ -1226,7 +1314,7 @@ def fetch_do_yn(q_content):
 	
 	action = {}
 	possession = None
-	saw_v_own = False
+	has_v_own = False
 	
 	for child in sub_lists[0]:  # the first VP
 		label, val = child.items()[0]
@@ -1235,12 +1323,12 @@ def fetch_do_yn(q_content):
 			action['v'] = val
 			
 		elif label == 'V(OWN)':
-			saw_v_own = True
+			has_v_own = True
 			
 		elif label == phrases.NOUN_PHRASE and action:
 			action['subject'] = val
 			
-		elif label == phrases.NOUN_PHRASE and saw_v_own:
+		elif label == phrases.NOUN_PHRASE and has_v_own:
 			possession = val
 	
 	if action:
@@ -2574,7 +2662,9 @@ def ssa_query_map(subj_subj_actions, actions_uid_query_map, subj_uid_query_map):
 			m, uid = info
 			val = v[uid]
 			
-			if m.get(val):
+			if val == -1:
+				data[key] = -1
+			elif m.get(val):
 				data[key] = '({})'.format(m[val])
 		
 		if data:
@@ -3038,7 +3128,11 @@ def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_quer
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
 	}
 	
-	data = {'prep': ssas_loc_info['prep']}
+	data = {}
+	prep = ssas_loc_info['prep']
+	
+	if prep and prep != '*':
+		data['prep'] = prep
 	
 	for key, info in query_keys_map.items():
 		m, uid, model = info
@@ -3051,13 +3145,16 @@ def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_quer
 	
 	results = []
 	if ssas_location_results:
-		for result in ssas_location_results:
-			ssa_id = result[1]
-			
-			ssa_inner_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning='{}_id'.format(return_pos))
-			ssa_inner_query = '{} {}'.format(ssa_inner_query_prefix, keyify({'id': ssa_id}))
-			
-			results += find(models.SUBJECT, {'id': '({})'.format(ssa_inner_query)}, returning='orig')
+		if ssas_loc_info['subject_uid'] == '*':
+			for result in ssas_location_results:
+				subject = find(models.SUBJECT, {'id': result[2]}, returning='orig')[0][0]
+				results.append(['{} the {}'.format(result[3], subject)])
+		else:
+			for result in ssas_location_results:
+				ssa_id = result[1]
+				ssa_inner_query_prefix = select_where(models.SUBJECT_SUBJECT_ACTION, returning='{}_id'.format(return_pos))
+				ssa_inner_query = '{} {}'.format(ssa_inner_query_prefix, keyify({'id': ssa_id}))
+				results += find(models.SUBJECT, {'id': '({})'.format(ssa_inner_query)}, returning='orig')
 	
 	return [r[0] for r in results]
 
@@ -3108,7 +3205,7 @@ def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_quer
 	
 def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_query_map, return_pos=None):
 	query_keys_map = {
-		'rel_rel_action_id': [rra_uid_query_map, 'ssa_uid', models.REL_REL_ACTION],
+		'rel_rel_action_id': [rra_uid_query_map, 'rra_uid', models.REL_REL_ACTION],
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
 	}
 	
@@ -3215,7 +3312,7 @@ def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query
 
 def find_models_through_rrar_loc(rrar_loc_info, rra_uid_query_map, rel_uid_query_map, return_pos=None):
 	query_keys_map = {
-		'rel_rel_action_id': [rra_uid_query_map, 'ssa_uid', models.REL_REL_ACTION],
+		'rel_rel_action_id': [rra_uid_query_map, 'rra_uid', models.REL_REL_ACTION],
 		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL]
 	}
 	
