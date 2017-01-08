@@ -199,7 +199,11 @@ def format_memory(text):
 						
 					loc = a['location']
 					prep = loc['prep']
+					
 					loc_subj = loc['subject']
+					
+					det = loc_subj['det']
+					if det: det = det.lower()
 					
 					loc_subj_type = 'subj'
 					loc_subj_noun_uid = uid()
@@ -221,28 +225,32 @@ def format_memory(text):
 						ssas_locations[uid()] = {
 							'ssa_uid': subj_subj_action_uid,
 							'subject_uid': loc_subj_noun_uid,
-							'prep': prep
+							'prep': prep,
+							'det': det
 						}
 						
 					elif lead_subj_type == 'subj' and loc_subj_type == 'rel':  # ssar
 						ssar_locations[uid()] = {
 							'ssa_uid': subj_subj_action_uid,
 							'rel_uid': loc_subj_rel_uid,
-							'prep': prep
+							'prep': prep,
+							'det': det
 						}
 						
 					elif lead_subj_type == 'rel' and loc_subj_type == 'subj': # rsas
 						rsas_locations[uid()] = {
 							'rsa_uid': rel_subj_action_uid,
 							'subject_uid': loc_subj_noun_uid,
-							'prep': prep
+							'prep': prep,
+							'det': det
 						}
 						
 					else: # rsar
 						rsar_locations[uid()] = {
 							'rsa_uid': rel_subj_action_uid,
 							'rel_uid': loc_subj_rel_uid,
-							'prep': prep
+							'prep': prep,
+							'det': det
 						}
 		
 		else:
@@ -351,6 +359,9 @@ def format_memory(text):
 					prep = loc['prep']
 					loc_subj = loc['subject']
 					
+					det = loc_subj['det']
+					if det: det = det.lower()
+					
 					loc_subj_type = 'subj'
 					loc_subj_noun_uid = uid()
 					subjects[loc_subj_noun_uid] = {'orig': loc_subj['noun']}
@@ -371,7 +382,8 @@ def format_memory(text):
 						ss_locations[uid()] = {
 							'subj_a_uid': lead_subj_noun_uid,
 							'subj_b_uid': loc_subj_noun_uid,
-							'prep': prep
+							'prep': prep,
+							'det': det
 						}
 						
 					elif lead_subj_type == 'rel' and loc_subj_type == 'subj':
@@ -379,6 +391,7 @@ def format_memory(text):
 							'rel_uid': lead_subj_rel_uid,
 							'subject_uid': loc_subj_noun_uid,
 							'prep': prep,
+							'det': det,
 							'direction': 1
 						}
 						
@@ -387,6 +400,7 @@ def format_memory(text):
 							'rel_uid': loc_subj_rel_uid,
 							'subject_uid': lead_subj_noun_uid,
 							'prep': prep,
+							'det': det,
 							'direction': -1
 						}
 						
@@ -394,7 +408,8 @@ def format_memory(text):
 						rr_locations[uid()] = {
 							'rel_a_uid': lead_subj_rel_uid,
 							'rel_b_uid': loc_subj_rel_uid,
-							'prep': prep
+							'prep': prep,
+							'det': det
 						}
 					
 				elif data.get('datetime'):
@@ -586,7 +601,8 @@ def upsert_ss_locations(ss_locations, subj_uid_id_map):
 		data = {
 			'a_id': subj_uid_id_map[v['subj_a_uid']],
 			'b_id': subj_uid_id_map[v['subj_b_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.SS_LOCATION, data)
@@ -603,7 +619,8 @@ def upsert_rs_locations(rs_locations, subj_uid_id_map, rel_uid_id_map):
 			'rel_id': rel_uid_id_map[v['rel_uid']],
 			'subject_id': subj_uid_id_map[v['subject_uid']],
 			'prep': v['prep'],
-			'direction': v['direction']
+			'direction': v['direction'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.RS_LOCATION, data)
@@ -619,7 +636,8 @@ def upsert_rr_locations(rr_locations, rel_uid_id_map):
 		data = {
 			'a_id': rel_uid_id_map[v['rel_a_uid']],
 			'b_id': rel_uid_id_map[v['rel_b_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.RR_LOCATION, data)
@@ -635,7 +653,8 @@ def upsert_ssas_locations(ssas_locations, subj_subj_action_uid_id_map, subj_uid_
 		data = {
 			'subject_subject_action_id': subj_subj_action_uid_id_map[v['ssa_uid']],
 			'subject_id': subj_uid_id_map[v['subject_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.SSAS_LOCATION, data)
@@ -651,7 +670,8 @@ def upsert_ssar_locations(ssar_locations, subj_subj_action_uid_id_map, rel_uid_i
 		data = {
 			'subject_subject_action_id': subj_subj_action_uid_id_map[v['ssa_uid']],
 			'rel_id': rel_uid_id_map[v['rel_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.SSAR_LOCATION, data)
@@ -667,7 +687,8 @@ def upsert_rsas_locations(rsas_locations, rel_subj_action_uid_id_map, subj_uid_i
 		data = {
 			'rel_subject_action_id': rel_subj_action_uid_id_map[v['rsa_uid']],
 			'subject_id': subj_uid_id_map[v['subject_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.RSAS_LOCATION, data)
@@ -683,7 +704,8 @@ def upsert_rsar_locations(rsar_locations, rel_subj_action_uid_id_map, rel_uid_id
 		data = {
 			'rel_subject_action_id': rel_subj_action_uid_id_map[v['rsa_uid']],
 			'rel_id': rel_uid_id_map[v['rel_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.RSAR_LOCATION, data)
@@ -699,7 +721,8 @@ def upsert_rras_locations(rras_locations, rel_rel_action_uid_id_map, subj_uid_id
 		data = {
 			'rel_rel_action_id': rel_rel_action_uid_id_map[v['rra_uid']],
 			'subject_id': subj_uid_id_map[v['subject_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.RRAS_LOCATION, data)
@@ -715,7 +738,8 @@ def upsert_rrar_locations(rrar_locations, rel_rel_action_uid_id_map, rel_uid_id_
 		data = {
 			'rel_rel_action_id': rel_rel_action_uid_id_map[v['rra_uid']],
 			'rel_id': rel_uid_id_map[v['rel_uid']],
-			'prep': v['prep']
+			'prep': v['prep'],
+			'det': v['det']
 		}
 		
 		id = upsert(models.RRAR_LOCATION, data)
@@ -3545,12 +3569,21 @@ def find_models_through_ss_loc(ss_loc_info, subj_uid_query_map):
 		results = []
 		if ss_loc_results:
 			preps = [r[3] for r in ss_loc_results]
+			dets = [r[4] for r in ss_loc_results]
 			subject_ids = [r[2] for r in ss_loc_results]
 			subjects = [r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')]
 			
 			i = 0
 			for s in subjects:
-				results.append('{} the {}'.format(preps[i], s))
+				prep = preps[i]
+				det = dets[i]
+				
+				if det:
+					phrase = '{} {} {}'.format(prep, det, s)
+				else:
+					phrase = '{} {}'.format(prep, s)
+					
+				results.append(phrase)
 				i += 1
 		
 		return results
@@ -3607,12 +3640,21 @@ def find_models_through_rs_loc(rs_loc_info, subj_uid_query_map, rel_uid_query_ma
 		
 		if rs_loc_results:
 			preps = [r[3] for r in rs_loc_results]
+			dets = [r[5] for r in rs_loc_results]
 			subject_ids = [r[2] for r in rs_loc_results]
 			subjects = [r[0] for r in find(models.SUBJECT, {'id': subject_ids}, returning='orig')]
 			
 			i = 0
 			for s in subjects:
-				results['locations']['subjects'].append('{} the {}'.format(preps[i], s))
+				prep = preps[i]
+				det = dets[i]
+				
+				if det:
+					phrase = '{} {} {}'.format(prep, det, s)
+				else:
+					phrase = '{} {}'.format(prep, s)
+					
+				results['locations']['subjects'].append(phrase)
 				i += 1
 	
 	elif rs_loc_return_col == 'rel_id' and direction == -1:
@@ -3743,7 +3785,15 @@ def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_quer
 		if ssas_loc_info['subject_uid'] == '*':
 			for result in ssas_location_results:
 				subject = find(models.SUBJECT, {'id': result[2]}, returning='orig')[0][0]
-				results.append(['{} the {}'.format(result[3], subject)])
+				prep = result[3]
+				det = result[4]
+				
+				if det:
+					phrase = '{} {} {}'.format(prep, det, subject)
+				else:
+					phrase = '{} {}'.format(prep, subject)
+				
+				results.append([phrase])
 		else:
 			for result in ssas_location_results:
 				ssa_id = result[1]
@@ -3783,7 +3833,15 @@ def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_quer
 		if rsas_loc_info['subject_uid'] == '*':
 			for result in rsas_location_results:
 				subject = find(models.SUBJECT, {'id': result[2]}, returning='orig')[0][0]
-				results.append('{} the {}'.format(result[3], subject))
+				prep = result[3]
+				det = result[4]
+				
+				if det:
+					phrase = '{} {} {}'.format(prep, det, subject)
+				else:
+					phrase = '{} {}'.format(prep, subject)
+				
+				results.append(phrase)
 		else:
 			for result in rsas_location_results:
 				rsa_id = result[1]

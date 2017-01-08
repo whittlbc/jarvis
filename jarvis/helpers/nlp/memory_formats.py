@@ -5,7 +5,7 @@ words = sp.words
 STORAGE_PREDICATE_FORMATS = [
 	# ['V(BE)'],
 	['V(BE)', 'NP'],  # Tyler is my brother
-	# ['V(BE)', 'PP'],  # I am in California
+	['V(BE)', 'PP'],  # I am in California
 	# ['V(BE)', 'NP', 'NP'],
 	# ['V(BE)', {'VP': ['V*']}],  # I am playing
 	# ['V(BE)', {'VP': ['V*', 'NP']}],  # I am playing basketball
