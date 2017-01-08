@@ -65,14 +65,16 @@ WH_RETRIEVAL_PREDICATE_FORMATS = [
 	[{'VP': ['V*']}],
 	[{'VP': ['V*', 'NP']}],
 	[{'VP': ['V*', 'PP']}],
+	[{'VP': ['V(OWN)', 'NP']}],
 	['V(DO)', 'NP', {'VP': ['V*']}],
 	['V(DO)', 'NP', {'VP': ['V*', 'NP']}],
 	['V(DO)', 'NP', {'VP': ['V(OWN)', 'NP']}],
 	['V(DO)', 'NP', {'VP': ['V(OWN)']}],
+	['V(DO)', 'NP', {'VP': ['V*', 'PP']}],
 	['V(BE)', 'NP'],
 	['V(BE)', 'NP', 'NP'],
 	['V(BE)', 'PP'],
-	[{'VP': ['V(OWN)', 'NP']}],
+	['V(BE)', 'NP', 'PP']
 ]
 
 # Labels currently restricted when storing memories

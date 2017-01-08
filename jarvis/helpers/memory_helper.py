@@ -40,7 +40,7 @@ def format_memory(text):
 	]
 	
 	for v in tree_validations:
-		if not v(tree): 
+		if not v(tree):
 			return False
 
 	subj_tree, pred_tree = tree[0]
@@ -994,7 +994,7 @@ def fetch_wh_do(q_content, wh_info):
 		for s in find_all_subj_eqs(subject):
 			result = handle_method(s, action, wh_info)
 			
-			if result: 
+			if result:
 				return result
 			
 	elif has_v_own:
@@ -1311,6 +1311,7 @@ def handle_whnp_do_possession(subject, possession, wh_info):
 
 def fetch_do_yn(q_content):
 	np = first_of_label(q_content, label=phrases.NOUN_PHRASE)
+	pp = first_of_label(q_content, label=phrases.PREP_PHRASE)
 	
 	if not np:
 		error('DO query has no NP for some reason...{}'.format(tree))
@@ -1345,7 +1346,10 @@ def fetch_do_yn(q_content):
 		action['adv'] = []
 		
 		for s in find_all_subj_eqs(subject):
-			result = handle_do_yn_action(s, action)
+			if pp:
+				result = handle_do_yn_action_with_pp(s, action, pp.values()[0])
+			else:
+				result = handle_do_yn_action(s, action)
 			
 			if result == 'Yes':
 				return result
@@ -1360,44 +1364,146 @@ def fetch_do_yn(q_content):
 	return 'No'
 
 
-# Is Tyler my brother?
 def fetch_is_yn(q_content):
-	# Strip out NP's from content
 	subjects = [t.values()[0] for t in q_content if t.keys()[0] == phrases.NOUN_PHRASE]
+	pps = [t.values()[0] for t in q_content if t.keys()[0] == phrases.PREP_PHRASE]
 	
-	# Ensure 2 subjects exist since we're checking for a comparison.
-	if len(subjects) != 2:
-		error('Is-YN query doesn\'t have 2 NP instances for comparison...{}'.format(q_content))
-	
-	former, latter = subjects
-	
-	equiv_subjs = [s for s in find_all_subj_eqs(former)]
-	
-	if latter['det'] and latter['det'].lower() in ['a', 'an']: # relation=2
-		parents = []
-		for s in equiv_subjs:
-			parents += find_parents_for_child(s)
+	# Ex: Is Tyler my brother?
+	if len(subjects) == 2:
+		former, latter = subjects
 		
-		equiv_subjs = parents
+		equiv_subjs = [s for s in find_all_subj_eqs(former)]
 		
-	else: # relation=0
-		equiv_subjs = [s for s in equiv_subjs if s != former]
+		if latter['det'] and latter['det'].lower() in ['a', 'an']: # relation=2
+			parents = []
+			for s in equiv_subjs:
+				parents += find_parents_for_child(s)
 			
-	latter_match_info = [None, latter['noun'].lower()]
-	
-	if latter['owner']:
-		latter_match_info[0] = latter['owner'].lower()
-	
-	for s in equiv_subjs:
-		s_info = [None, s['noun'].lower()]
+			equiv_subjs = parents
+			
+		else: # relation=0
+			equiv_subjs = [s for s in equiv_subjs if s != former]
+				
+		latter_match_info = [None, latter['noun'].lower()]
 		
-		if s['owner']:
-			s_info[0] = s['owner'].lower()
+		if latter['owner']:
+			latter_match_info[0] = latter['owner'].lower()
 		
-		if s_info == latter_match_info:
-			return 'Yes'
+		for s in equiv_subjs:
+			s_info = [None, s['noun'].lower()]
+			
+			if s['owner']:
+				s_info[0] = s['owner'].lower()
+			
+			if s_info == latter_match_info:
+				return 'Yes'
+	
+	# Ex: Is Tyler in California?
+	elif len(subjects) == 1 and len(pps) == 1:
+		for s in find_all_subj_eqs(subjects[0]):
+			if pp_subj_relations(pps[0], s):
+				return 'Yes'
 		
 	return 'No'
+
+
+def pp_subj_relations(pp, subject):
+	prep_type = pp['prep_type']
+	prep = pp['prep']
+	pp_subject = pp['np']
+
+	subjects = {}
+	rels = {}
+	
+	subj_type = 'subj'
+	subj_noun_uid = uid()
+	subjects[subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		subj_type = 'rel'
+		subj_owner_uid = uid()
+		subjects[subj_owner_uid] = {'orig': subject['owner']}
+		
+		subj_rel_uid = uid()
+		rels[subj_rel_uid] = {
+			'subj_a_uid': subj_owner_uid,
+			'subj_b_uid': subj_noun_uid,
+			'relation': 1
+		}
+	
+	pp_subj_type = 'subj'
+	pp_subj_noun_uid = uid()
+	subjects[pp_subj_noun_uid] = {'orig': pp_subject['noun']}
+	
+	if pp_subject['owner']:
+		pp_subj_type = 'rel'
+		pp_subj_owner_uid = uid()
+		subjects[pp_subj_owner_uid] = {'orig': pp_subject['owner']}
+		
+		pp_subj_rel_uid = uid()
+		rels[pp_subj_rel_uid] = {
+			'subj_a_uid': pp_subj_owner_uid,
+			'subj_b_uid': pp_subj_noun_uid,
+			'relation': 1
+		}
+	
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	
+	if prep_type == 'location':
+		if subj_type == 'subj':
+			if pp_subj_type == 'subj':
+				ss_loc_info = {
+					'subj_a_uid': subj_noun_uid,
+					'subj_b_uid': pp_subj_noun_uid,
+					'prep': prep
+				}
+				
+				result = find_models_through_ss_loc(ss_loc_info, subj_uid_query_map)
+				
+			else:  # pp_subj_type == 'rel
+				rs_loc_info = {
+					'rel_uid': pp_subj_rel_uid,
+					'subject_uid': subj_noun_uid,
+					'prep': prep
+				}
+				
+				result = find_models_through_rs_loc(
+					rs_loc_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					direction=-1
+				)['rs_loc_results']
+				
+		else:  # subj_type == 'rel
+			if pp_subj_type == 'subj':
+				rs_loc_info = {
+					'rel_uid': subj_rel_uid,
+					'subject_uid': pp_subj_noun_uid,
+					'prep': prep
+				}
+				
+				result = find_models_through_rs_loc(
+					rs_loc_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					direction=1
+				)['rs_loc_results']
+			
+			else:  # pp_subj_type == 'rel
+				rr_loc_info = {
+					'rel_a_uid': subj_rel_uid,
+					'rel_b_uid': pp_subj_rel_uid,
+					'prep': prep
+				}
+				
+				result = find_models_through_rr_loc(rr_loc_info, rel_uid_query_map)
+				
+	elif prep_type == 'datetime':
+		# For when you add WHEN support
+		print
+	
+	return result
 
 
 def find_parents_for_child(subject):
@@ -1580,6 +1686,336 @@ def find_all_subj_eqs(subject):
 	
 	return eq_subjects
 	
+	
+def handle_do_yn_action_with_pp(subject, action, pp):
+	subjects = {}
+	rels = {}
+	actions = {}
+	subj_subj_actions = {}
+	rel_subj_actions = {}
+	rel_rel_actions = {}
+	
+	lead_subj_type = 'subj'
+	lead_subj_noun_uid = uid()
+	subjects[lead_subj_noun_uid] = {'orig': subject['noun']}
+	
+	if subject['owner']:
+		lead_subj_type = 'rel'
+		lead_subj_owner_uid = uid()
+		subjects[lead_subj_owner_uid] = {'orig': subject['owner']}
+		
+		lead_subj_rel_uid = uid()
+		rels[lead_subj_rel_uid] = {
+			'subj_a_uid': lead_subj_owner_uid,
+			'subj_b_uid': lead_subj_noun_uid,
+			'relation': 1  # change to class constants somewhere
+		}
+	
+	action_uid = uid()
+	actions[action_uid] = {'verb': action['v']}
+	
+	action_subj = action.get('subject')
+	action_subj_type = None
+	
+	if action_subj and action_subj['noun'].lower() not in ['anything', 'something']:
+		action_subj_type = 'subj'
+		action_subj_noun_uid = uid()
+		subjects[action_subj_noun_uid] = {'orig': action_subj['noun']}
+		
+		if action_subj['owner']:
+			action_subj_type = 'rel'
+			action_subj_owner_uid = uid()
+			subjects[action_subj_owner_uid] = {'orig': action_subj['owner']}
+			
+			action_subj_rel_uid = uid()
+			rels[action_subj_rel_uid] = {
+				'subj_a_uid': action_subj_owner_uid,
+				'subj_b_uid': action_subj_noun_uid,
+				'relation': 1
+			}
+			
+	prep_type = pp['prep_type']
+	prep = pp['prep']
+	pp_subject = pp['np']
+	
+	pp_subj_type = 'subj'
+	pp_subj_noun_uid = uid()
+	subjects[pp_subj_noun_uid] = {'orig': pp_subject['noun']}
+	
+	if pp_subject['owner']:
+		pp_subj_type = 'rel'
+		pp_subj_owner_uid = uid()
+		subjects[pp_subj_owner_uid] = {'orig': pp_subject['owner']}
+		
+		pp_subj_rel_uid = uid()
+		rels[pp_subj_rel_uid] = {
+			'subj_a_uid': pp_subj_owner_uid,
+			'subj_b_uid': pp_subj_noun_uid,
+			'relation': 1
+		}
+	
+	subj_uid_query_map = subject_query_map(subjects)
+	rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+	actions_uid_query_map = action_query_map(actions)
+	
+	answer = 'No'
+	
+	if lead_subj_type == 'subj':
+		if not action_subj_type:
+			# Ex: Do I play <PP>
+			subj_subj_actions[uid()] = {
+				'subj_a_uid': lead_subj_noun_uid,
+				'subj_b_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			rel_subj_actions[uid()] = {
+				'rel_uid': '*',
+				'subject_uid': lead_subj_noun_uid,
+				'action_uid': action_uid,
+				'direction': -1
+			}
+			
+			ssa_uid_query_map = ssa_query_map(subj_subj_actions, actions_uid_query_map, subj_uid_query_map)
+			rsa_uid_query_map = rsa_query_map(rel_subj_actions, actions_uid_query_map, subj_uid_query_map, rel_uid_query_map)
+			
+			if pp_subj_type == 'subj':
+				for ssa_uid in ssa_uid_query_map.keys():
+					ssas_loc_info = {
+						'ssa_uid': ssa_uid,
+						'subject_uid': pp_subj_noun_uid,
+						'prep': prep,
+					}
+								
+					results = find_models_through_ssas_loc(
+						ssas_loc_info,
+						ssa_uid_query_map,
+						subj_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+				
+				for rsa_uid in rsa_uid_query_map.keys():
+					rsas_loc_info = {
+						'rsa_uid': rsa_uid,
+						'subject_uid': pp_subj_noun_uid,
+						'prep': prep,
+					}
+					
+					results = find_models_through_rsas_loc(
+						rsas_loc_info,
+						rsa_uid_query_map,
+						subj_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+			
+			else:  # pp_subj_type == 'rel'
+				for ssa_uid in ssa_uid_query_map.keys():
+					ssar_loc_info = {
+						'ssa_uid': ssa_uid,
+						'rel_uid': pp_subj_rel_uid,
+						'prep': prep,
+					}
+					
+					results = find_models_through_ssar_loc(
+						ssar_loc_info,
+						ssa_uid_query_map,
+						rel_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+				
+				for rsa_uid in rsa_uid_query_map.keys():
+					rsar_loc_info = {
+						'rsa_uid': rsa_uid,
+						'rel_uid': pp_subj_rel_uid,
+						'prep': prep,
+					}
+					
+					results = find_models_through_rsar_loc(
+						rsar_loc_info,
+						rsa_uid_query_map,
+						rel_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+		
+		elif action_subj_type == 'subj':
+			print
+			# SAVING FOR LATER
+			# ss_uid_info = {
+			# 	'subj_a_uid': lead_subj_noun_uid,
+			# 	'subj_b_uid': action_subj_noun_uid,
+			# 	'action_uid': action_uid
+			# }
+			#
+			# ssa_results = find_models_through_ssa(
+			# 	ss_uid_info,
+			# 	actions_uid_query_map,
+			# 	subj_uid_query_map
+			# )
+			#
+			# if ssa_results:
+			# 	answer = 'Yes'
+		
+		elif action_subj_type == 'rel':
+			print
+			# SAVING FOR LATER
+			# rs_uid_info = {
+			# 	'rel_uid': action_subj_rel_uid,
+			# 	'subject_uid': lead_subj_noun_uid,
+			# 	'action_uid': action_uid
+			# }
+			#
+			# rsa_results = find_models_through_rsa(
+			# 	rs_uid_info,
+			# 	actions_uid_query_map,
+			# 	subj_uid_query_map,
+			# 	rel_uid_query_map,
+			# 	dir=-1
+			# )
+			#
+			# if rsa_results['rsa_results']:
+			# 	answer = 'Yes'
+	
+	else:  # lead_subj_type = 'rel'
+		if not action_subj_type:
+			# Ex: Does my brother play <PP>
+			rel_subj_actions[uid()] = {
+				'rel_uid': lead_subj_rel_uid,
+				'subject_uid': '*',
+				'action_uid': action_uid,
+				'direction': 1
+			}
+			
+			rel_rel_actions[uid()] = {
+				'rel_a_uid': lead_subj_rel_uid,
+				'rel_b_uid': '*',
+				'action_uid': action_uid
+			}
+			
+			rsa_uid_query_map = rsa_query_map(rel_subj_actions, actions_uid_query_map, subj_uid_query_map, rel_uid_query_map)
+			rra_uid_query_map = rra_query_map(rel_rel_actions, actions_uid_query_map, rel_uid_query_map)
+			
+			if pp_subj_type == 'subj':
+				for rsa_uid in rsa_uid_query_map.keys():
+					rsas_loc_info = {
+						'rsa_uid': rsa_uid,
+						'subject_uid': pp_subj_noun_uid,
+						'prep': prep,
+					}
+					
+					results = find_models_through_rsas_loc(
+						rsas_loc_info,
+						rsa_uid_query_map,
+						subj_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+				
+				for rra_uid in rra_uid_query_map.keys():
+					rras_loc_info = {
+						'rra_uid': rra_uid,
+						'subject_uid': pp_subj_noun_uid,
+						'prep': prep,
+					}
+					
+					results = find_models_through_rras_loc(
+						rras_loc_info,
+						rra_uid_query_map,
+						subj_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+			
+			else:  # pp_subj_type == 'rel'
+				for rsa_uid in rsa_uid_query_map.keys():
+					rsar_loc_info = {
+						'rsa_uid': rsa_uid,
+						'rel_uid': pp_subj_rel_uid,
+						'prep': prep,
+					}
+					
+					results = find_models_through_rsar_loc(
+						rsar_loc_info,
+						rsa_uid_query_map,
+						rel_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+		
+				for rra_uid in rra_uid_query_map.keys():
+					rrar_loc_info = {
+						'rra_uid': rra_uid,
+						'rel_uid': pp_subj_rel_uid,
+						'prep': prep,
+					}
+					
+					results = find_models_through_rrar_loc(
+						rrar_loc_info,
+						rra_uid_query_map,
+						rel_uid_query_map,
+						force_top_level_model_return=True
+					)
+					
+					if results:
+						return 'Yes'
+		
+		elif action_subj_type == 'subj':
+			print
+			# SAVING FOR LATER
+			# rs_uid_info = {
+			# 	'rel_uid': lead_subj_rel_uid,
+			# 	'subject_uid': action_subj_noun_uid,
+			# 	'action_uid': action_uid
+			# }
+			#
+			# rsa_results = find_models_through_rsa(
+			# 	rs_uid_info,
+			# 	actions_uid_query_map,
+			# 	subj_uid_query_map,
+			# 	rel_uid_query_map,
+			# 	dir=1
+			# )
+			#
+			# if rsa_results['rsa_results']:
+			# 	answer = 'Yes'
+			#
+		elif action_subj_type == 'rel':
+			print
+			# SAVING FOR LATER
+			# rr_uid_info = {
+			# 	'rel_a_uid': lead_subj_rel_uid,
+			# 	'rel_b_uid': action_subj_rel_uid,
+			# 	'action_uid': action_uid
+			# }
+			#
+			# rra_results = find_models_through_rra(
+			# 	rr_uid_info,
+			# 	actions_uid_query_map,
+			# 	rel_uid_query_map
+			# )
+			#
+			# if rra_results:
+			# 	answer = 'Yes'
+	
+	return answer
+
 
 def handle_do_yn_action(subject, action):
 	subjects = {}
@@ -3278,7 +3714,7 @@ def find_models_through_rr_loc(rr_loc_info, rel_uid_query_map):
 	return results
 
 
-def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_query_map, return_pos=None):
+def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_query_map, return_pos=None, force_top_level_model_return=False):
 	query_keys_map = {
 		'subject_subject_action_id': [ssa_uid_query_map, 'ssa_uid', models.SUBJECT_SUBJECT_ACTION],
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
@@ -3299,6 +3735,9 @@ def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_quer
 	
 	ssas_location_results = find(models.SSAS_LOCATION, data)
 	
+	if force_top_level_model_return:
+		return ssas_location_results
+	
 	results = []
 	if ssas_location_results:
 		if ssas_loc_info['subject_uid'] == '*':
@@ -3315,7 +3754,7 @@ def find_models_through_ssas_loc(ssas_loc_info, ssa_uid_query_map, subj_uid_quer
 	return [r[0] for r in results]
 
 
-def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_query_map, return_model=None):
+def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_query_map, return_model=None, force_top_level_model_return=False):
 	query_keys_map = {
 		'rel_subject_action_id': [rsa_uid_query_map, 'rsa_uid', models.REL_SUBJECT_ACTION],
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
@@ -3336,6 +3775,9 @@ def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_quer
 	
 	rsas_location_results = find(models.RSAS_LOCATION, data)
 	
+	if force_top_level_model_return:
+		return rsas_location_results
+
 	results = []
 	if rsas_location_results:
 		if rsas_loc_info['subject_uid'] == '*':
@@ -3368,7 +3810,7 @@ def find_models_through_rsas_loc(rsas_loc_info, rsa_uid_query_map, subj_uid_quer
 	return results
 
 	
-def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_query_map, return_pos=None):
+def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_query_map, return_pos=None, force_top_level_model_return=False):
 	query_keys_map = {
 		'rel_rel_action_id': [rra_uid_query_map, 'rra_uid', models.REL_REL_ACTION],
 		'subject_id': [subj_uid_query_map, 'subject_uid', models.SUBJECT]
@@ -3389,6 +3831,9 @@ def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_quer
 	
 	rras_location_results = find(models.RRAS_LOCATION, data)
 	
+	if force_top_level_model_return:
+		return rras_location_results
+	
 	results = []
 	if rras_location_results:
 		for result in rras_location_results:
@@ -3405,7 +3850,7 @@ def find_models_through_rras_loc(rras_loc_info, rra_uid_query_map, subj_uid_quer
 	return results
 
 
-def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query_map, return_pos=None):
+def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query_map, return_pos=None, force_top_level_model_return=False):
 	query_keys_map = {
 		'subject_subject_action_id': [ssa_uid_query_map, 'ssa_uid', models.SUBJECT_SUBJECT_ACTION],
 		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL]
@@ -3425,6 +3870,9 @@ def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query
 			data[key] = '({})'.format(m[val])
 	
 	ssar_location_results = find(models.SSAR_LOCATION, data)
+	
+	if force_top_level_model_return:
+		return ssar_location_results
 	
 	results = []
 	if ssar_location_results:
@@ -3447,7 +3895,7 @@ def find_models_through_ssar_loc(ssar_loc_info, ssa_uid_query_map, rel_uid_query
 	return [r[0] for r in results]
 
 
-def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query_map, return_model=None):
+def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query_map, return_model=None, force_top_level_model_return=False):
 	query_keys_map = {
 		'rel_subject_action_id': [rsa_uid_query_map, 'rsa_uid', models.REL_SUBJECT_ACTION],
 		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL]
@@ -3467,6 +3915,9 @@ def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query
 			data[key] = '({})'.format(m[val])
 	
 	rsar_location_results = find(models.RSAR_LOCATION, data)
+	
+	if force_top_level_model_return:
+		return rsar_location_results
 	
 	results = []
 	if rsar_location_results:
@@ -3503,7 +3954,7 @@ def find_models_through_rsar_loc(rsar_loc_info, rsa_uid_query_map, rel_uid_query
 	return results
 
 
-def find_models_through_rrar_loc(rrar_loc_info, rra_uid_query_map, rel_uid_query_map, return_pos=None):
+def find_models_through_rrar_loc(rrar_loc_info, rra_uid_query_map, rel_uid_query_map, return_pos=None, force_top_level_model_return=False):
 	query_keys_map = {
 		'rel_rel_action_id': [rra_uid_query_map, 'rra_uid', models.REL_REL_ACTION],
 		'rel_id': [rel_uid_query_map, 'rel_uid', models.REL]
@@ -3523,6 +3974,9 @@ def find_models_through_rrar_loc(rrar_loc_info, rra_uid_query_map, rel_uid_query
 			data[key] = '({})'.format(m[val])
 	
 	rrar_location_results = find(models.RRAR_LOCATION, data)
+	
+	if force_top_level_model_return:
+		return rrar_location_results
 	
 	results = []
 	if rrar_location_results:
@@ -3796,7 +4250,7 @@ def all_nested_labels(tree):
 def first_of_label(pred_content, label='*'):
 	for g in pred_content:
 		if isinstance(g, list):
-			return first_of_label(g)
+			return first_of_label(g, label=label)
 		elif isinstance(g, dict) and g.keys() and (g.keys()[0] == label or label == '*'):
 			return g
 		
