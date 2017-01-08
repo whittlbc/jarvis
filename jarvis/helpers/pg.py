@@ -76,11 +76,15 @@ def keyify(d, connector=''):
 		else:
 			v = str(v)
 			
-		if isinstance(v, list) or isinstance(v, tuple) or (isinstance(v, basestring) and v[0] == '('):
+		if isinstance(v, tuple) or (isinstance(v, basestring) and v[0] == '('):
 			assoc = 'IN'
 		else:
 			assoc = '='
 			
+		if isinstance(v, tuple):
+			# get rid of trailing comma
+			v = '({})'.format(','.join(map(lambda x: str(x), v)))
+		
 		groups.append('{} {} {}'.format(k, assoc, v))
 	
 	return connector.join(groups)
