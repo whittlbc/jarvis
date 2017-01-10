@@ -5,7 +5,7 @@ import jarvis.actions.errors as errors
 import jarvis.actions.core as core
 import jarvis.helpers.helpers as helpers
 import jarvis.helpers.db as db
-from jarvis.helpers.memory_helper import format_memory, query_memory
+from jarvis.helpers.memory_helper import store_memory, fetch_memory
 import re
 
 rnn = Rnn()
@@ -66,7 +66,7 @@ def matches_text_pattern(m):
 
 
 def fetch_memory(m):
-	answer = query_memory(m.text)
+	answer = fetch_memory(m.text)
 	
 	if answer:
 		core.remember(answer, m.is_audio)
@@ -81,7 +81,7 @@ def store_memory(m):
 	
 	mem_phrase = matches.group(1)
 	
-	if format_memory(mem_phrase):
+	if store_memory(mem_phrase):
 		core.resp_new_memory(m.is_audio)
 		return True
 	

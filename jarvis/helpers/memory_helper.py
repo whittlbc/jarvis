@@ -30,7 +30,7 @@ models = Models()
 # STORAGE
 ################################
 
-def format_memory(text):
+def store_memory(text):
 	text = strip_trailing_punc(text)
 	tree = to_tree(text)
 	
@@ -881,7 +881,7 @@ def get_verb_tag(verb):
 # RETRIEVAL
 ################################
 
-def query_memory(text):
+def fetch_memory(text):
 	trailing_words = []
 	count = 0
 	
