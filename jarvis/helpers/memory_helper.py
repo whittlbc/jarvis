@@ -885,15 +885,23 @@ def fetch_memory(text):
 	trailing_words = []
 	count = 0
 	
+	starts_with_is = False
 	for g in pos_tag(strip_trailing_punc(text).split()):
 		word, label = g
 		
 		if label == words.MODAL or (count == 0 and lemmatize(word.lower(), pos='v') == 'do'):
 			word = 'did'
+		elif count == 0 and word.lower() == 'is':
+			starts_with_is = True
+		
+		# Starting a Y/N question with 'Is' creates a weird tree representation if there's a PP in it.
+		# So swap 'is' with 'are', which fixes it.
+		if starts_with_is and count > 0 and label == words.PREP:
+			trailing_words[0] = 'Are'
 		
 		trailing_words.append(word)
 		count += 1
-		
+				
 	text = ' '.join(trailing_words) + '?'
 	tree = to_tree(text)
 	answer = None
