@@ -2831,66 +2831,7 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 	else:
 		if leading_v_label == 'V(BE)':
 			if wh_info['wh'] in ['when', 'where']:
-				if inner_subj_type == 'subj':
-					ss_loc_info = {
-						'subj_a_uid': inner_subj_noun_uid,
-						'subj_b_uid': wh_info['wh'],
-						'prep': '*'
-					}
-					
-					rs_loc_info = {
-						'rel_uid': wh_info['wh'],
-						'subject_uid': inner_subj_noun_uid,
-						'prep': '*',
-					}
-					
-					ss_loc_results = find_models_through_ss_loc(
-						ss_loc_info,
-						subj_uid_query_map
-					)
-					
-					rs_loc_results = find_models_through_rs_loc(
-						rs_loc_info,
-						subj_uid_query_map,
-						rel_uid_query_map,
-						direction=-1
-					)
-					
-					result += ss_loc_results
-					
-					for info in rs_loc_results['locations']['rels']:
-						result.append('{} {}'.format(info['prep'], format_possession([corrected_owner(info['owner']), info['noun']])))
-				
-				else: # inner_subj_type = 'rel
-					rs_loc_info = {
-						'rel_uid': inner_subj_rel_uid,
-						'subject_uid': wh_info['wh'],
-						'prep': '*',
-					}
-					
-					rr_loc_info = {
-						'rel_a_uid': inner_subj_rel_uid,
-						'rel_b_uid': wh_info['wh'],
-						'prep': '*'
-					}
-					
-					rs_loc_results = find_models_through_rs_loc(
-						rs_loc_info,
-						subj_uid_query_map,
-						rel_uid_query_map,
-						direction=1
-					)
-					
-					rr_loc_results = find_models_through_rr_loc(
-						rr_loc_info,
-						rel_uid_query_map
-					)
-					
-					result += rs_loc_results['locations']['subjects']
-					
-					for info in rr_loc_results:
-						result.append('{} {}'.format(info['prep'], format_possession([corrected_owner(info['owner']), info['noun']])))
-			
+				result += fetch_when_where_for_subject(inner_subj, wh_info)
 			else:
 				if inner_subj_type == 'subj':
 					r_uid_info = [
@@ -3124,6 +3065,104 @@ def fetch_memory_wh(modeled_content, wh_info, leading_v_label):
 				result += [corrected_owner(r) for r in rs_results['subjects']]
 	
 	return and_join(result)
+
+
+# This method is all kinds of inefficient. Not caring right now. Care when you get everything working.
+def fetch_when_where_for_subject(subject, wh_info):
+	result = []
+	wh = wh_info['wh']
+	
+	for s in find_all_subj_eqs(subject):
+		subjects = {}
+		rels = {}
+		
+		subj_type = 'subj'
+		subj_noun_uid = uid()
+		subjects[subj_noun_uid] = {'orig': s['noun']}
+		
+		if s['owner']:
+			subj_type = 'rel'
+			subj_owner_uid = uid()
+			subjects[subj_owner_uid] = {'orig': s['owner']}
+			
+			subj_rel_uid = uid()
+			rels[subj_rel_uid] = {
+				'subj_a_uid': subj_owner_uid,
+				'subj_b_uid': subj_noun_uid,
+				'relation': 1
+			}
+		
+		subj_uid_query_map = subject_query_map(subjects)
+		rel_uid_query_map = rel_query_map(rels, subj_uid_query_map)
+			
+		if wh == 'where':
+			if subj_type == 'subj':
+				ss_loc_info = {
+					'subj_a_uid': subj_noun_uid,
+					'subj_b_uid': wh,
+					'prep': '*'
+				}
+				
+				rs_loc_info = {
+					'rel_uid': wh,
+					'subject_uid': subj_noun_uid,
+					'prep': '*',
+				}
+				
+				ss_loc_results = find_models_through_ss_loc(
+					ss_loc_info,
+					subj_uid_query_map
+				)
+				
+				rs_loc_results = find_models_through_rs_loc(
+					rs_loc_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					direction=-1
+				)
+				
+				result += ss_loc_results
+				
+				for info in rs_loc_results['locations']['rels']:
+					result.append('{} {}'.format(info['prep'], format_possession([corrected_owner(info['owner']), info['noun']])))
+			
+			else:  # inner_subj_type = 'rel
+				rs_loc_info = {
+					'rel_uid': subj_rel_uid,
+					'subject_uid': wh,
+					'prep': '*',
+				}
+				
+				rr_loc_info = {
+					'rel_a_uid': subj_rel_uid,
+					'rel_b_uid': wh,
+					'prep': '*'
+				}
+				
+				rs_loc_results = find_models_through_rs_loc(
+					rs_loc_info,
+					subj_uid_query_map,
+					rel_uid_query_map,
+					direction=1
+				)
+				
+				rr_loc_results = find_models_through_rr_loc(
+					rr_loc_info,
+					rel_uid_query_map
+				)
+				
+				result += rs_loc_results['locations']['subjects']
+				
+				for info in rr_loc_results:
+					result.append('{} {}'.format(info['prep'], format_possession([corrected_owner(info['owner']), info['noun']])))
+		
+		elif wh == 'when':
+			# TODO: Add when support
+			print
+		else:
+			error('Invalid WH type: "{}". Should have been "when" or "where"'.format(wh))
+		
+	return result
 
 
 def select_where(model, returning='*'):
