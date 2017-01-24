@@ -42,6 +42,5 @@ scipy==0.18.1
 six==1.10.0
 SQLAlchemy==1.0.15
 suds==0.4
-tensorflow==0.11.0rc2
 tqdm==4.9.0
 Werkzeug==0.11.11
