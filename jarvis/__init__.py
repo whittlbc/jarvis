@@ -1,6 +1,6 @@
 import logging
 from flask import Flask
-from jarvis.core.predictor import Predictor
+# from jarvis.core.predictor import Predictor
 
 
 # Init app
@@ -11,5 +11,5 @@ app.logger.addHandler(logging.FileHandler('main.log'))
 app.logger.setLevel(logging.INFO)
 logger = app.logger
 
-predictor = Predictor()
+# predictor = Predictor()
 

@@ -1,10 +1,10 @@
 from jarvis import app
 from flask import render_template, request
-import jarvis.learn.classify.train as trainer
+# import jarvis.learn.classify.train as trainer
 from flask.ext.socketio import SocketIO
-from jarvis.handlers import new_message
+# from jarvis.handlers import new_message
 from jarvis.helpers.configs import configs
-import jarvis.jobs as jobs
+# import jarvis.jobs as jobs
 from jarvis.helpers.cache import cache
 
 socket = SocketIO(app)
@@ -36,10 +36,10 @@ def on_message(e):
 
 	
 # Train our classifier
-trainer.perform()
+# trainer.perform()
 
 # Add jobs to our scheduler
-jobs.add_jobs(app)
+# jobs.add_jobs(app)
 
 # Start our app
 if __name__ == '__main__':
