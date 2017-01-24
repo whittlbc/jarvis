@@ -10,12 +10,13 @@ import re
 
 rnn = Rnn()
 
-
 def perform(e):
 	message = Message(e)
-	
+		
 	# Do nothing if empty text
 	if not message.text.strip(): return
+	
+	import code; code.interact(local=dict(globals(), **locals()))
 	
 	# Run through our registered text matches, regex patterns, etc.
 	# before using our trained model to make the prediction
@@ -47,8 +48,8 @@ def perform(e):
 
 def matches_text_pattern(m):
 	potential_matches = [
-		fetch_memory,
-		store_memory,
+		try_fetching_memory,
+		try_storing_memory,
 		forget_memory,
 		list_memories,
 		google,
@@ -65,7 +66,7 @@ def matches_text_pattern(m):
 	return False
 
 
-def fetch_memory(m):
+def try_fetching_memory(m):
 	answer = fetch_memory(m.text)
 	
 	if answer:
@@ -75,7 +76,7 @@ def fetch_memory(m):
 	return False
 
 
-def store_memory(m):
+def try_storing_memory(m):
 	matches = re.search('^(remember that|remember) (.*)', m.text, re.I)
 	if not matches: return False
 	

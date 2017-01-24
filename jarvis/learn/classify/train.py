@@ -14,7 +14,7 @@ def perform():
 	model = GridSearchCV(pipeline(), gs_clf_params(), n_jobs=-1)
 	
 	# Get your training and testing sets of data with 50/50 split
-	(train_data, train_targets), (test_data, test_targets) = dp.geft_data()
+	(train_data, train_targets), (test_data, test_targets) = dp.get_data()
 	
 	# Train your model
 	model = model.fit(train_data, train_targets)

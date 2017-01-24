@@ -36,23 +36,30 @@
       });
     };
 
-    var attentionSound;
-
     $(document).ready(function () {
-      attentionSound = new Audio('http://confluxapp.s3-website-us-west-1.amazonaws.com/jarvis/attention.wav');
-      attentionSound.load();
 
+      // Set up socket connection
       socket = io.connect('http://' + document.domain + ':' + location.port + '/master');
 
-      var emit = function (type, data) {
-        data = data || {};
-        data.type = type;
-        socket.emit('event', data);
+      // Sends text to server through socket as a 'message' event
+      var sendMessage = function (text, isAudio) {
+        isResponding = true;
+        socket.emit('message', { text: text, isAudio: !!isAudio });
       };
 
+      // Submit text input to server by clicking submit button
+      $('#emit').submit(function () {
+        var $input = $('#emit_data');
+        sendMessage($input.val());
+        $input.val('').focus();
+        return false;
+      });
+
+      // Handle response from Jarvis
       socket.on('response', function (message) {
         var text = message.text;
 
+        // Append text response to chat feed if exists
         if (text) {
           $div = $('<div>', {text: 'Jarvis:  ' + text});
           $div.css('white-space', 'pre-line');
@@ -63,6 +70,7 @@
 
         if (message.isAudio || soundbite) {
           if (soundbite) {
+            // Play soundbite by url provided in response
             var audio = new Audio(soundbite);
 
             audio.onended = function () {
@@ -71,13 +79,14 @@
 
             audio.load();
             audio.play();
-          }
-          else {
+          } else {
+            // Play speech response
             speech.voice = voices['Karen'];
             speech.text = text;
             window.speechSynthesis.speak(speech);
           }
         } else if (message.navigateTo) {
+          // Navigate to url if provided in response
           window.open(message.navigateTo, '_blank');
           isResponding = false;
         } else {
@@ -85,78 +94,10 @@
         }
       });
 
-      $('#emit').submit(function () {
-        var $input = $('#emit_data');
-        sendMessage($input.val());
-        $input.val('').focus();
-        return false;
-      });
-
-      function sendMessage (text, isAudio) {
-        isResponding = true;
-        emit('message:new', { text: text, isAudio: !!isAudio });
-      }
-
-      var profanity = ['fuck', 'fucking', 'shit', 'bitch', 'asshole', 'nigga'];
-      var profanityMap = {};
-
-      var escapedProfanity = _.map(profanity, function (word) {
-        var firstChar = word[0];
-        var hiddenCharsArray = Array(word.length);
-        profanityMap[firstChar + hiddenCharsArray.join('*')] = word;
-        return firstChar + hiddenCharsArray.join('\\*');
-      });
-
-      var profaneRegex = new RegExp(escapedProfanity.join('|'), 'gi');
-
-      function checkForProfanity (text) {
-        return text.replace(profaneRegex, function(match){
-          return profanityMap[match.toLowerCase()];
-        });
-      }
-
-      var namesIsh = [
-        'jarvis',
-        'travis',
-        'tervis',
-        'service',
-        'chavez',
-        'garbage',
-        'nervous',
-        'garvis'
-      ];
-
-      var promptRegex = new RegExp('\\b(' + namesIsh.join('|') + ')\\b', 'i');
-
-      function isPrompt (text) {
-        return text.match(promptRegex) != null;
-      }
-
-      var gatheringSpeechQuery = false;
-
-      if (annyang) {
-        annyang.addCallback('result', function (guesses) {
-          console.log(guesses);
-
-          if (isResponding) {
-            return;
-          }
-
-          // if gathering result as the query to be sent to server...
-          if (gatheringSpeechQuery) {
-            gatheringSpeechQuery = false;
-            sendMessage(checkForProfanity(guesses[0]), true);
-          }
-          // if not gathering query, and this result is prompting the bot with it's name...
-          else if (isPrompt(guesses.join(' '))) {
-            gatheringSpeechQuery = true;
-            attentionSound.play();
-          }
-        });
-
-        annyang.start({ autoRestart: true, continuous: false });
-      }
-
+      // Add Objective-C incoming message handlers
+      window.handleVoiceMessage = function (data) {
+        sendMessage(data.message, true);
+      };
 
     });
 
