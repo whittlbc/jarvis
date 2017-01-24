@@ -4,9 +4,9 @@ from flask import render_template, request
 # import jarvis.learn.classify.train as trainer
 from flask_socketio import SocketIO
 # from jarvis.handlers import new_message
-from jarvis.helpers.configs import configs
+# from jarvis.helpers.configs import configs
 # import jarvis.jobs as jobs
-from jarvis.helpers.cache import cache
+# from jarvis.helpers.cache import cache
 
 socket = SocketIO(app)
 namespace = '/master'
@@ -44,4 +44,4 @@ def on_message(e):
 
 # Start our app
 if __name__ == '__main__':
-	socket.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=configs.DEBUG, use_reloader=False)
+	socket.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True, use_reloader=False)
