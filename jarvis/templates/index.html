@@ -59,7 +59,7 @@
 
         // Append text response to chat feed if exists
         if (text) {
-          $div = $('<div>', {text: 'Jarvis:  ' + text});
+          var $div = $('<div>', {text: 'Jarvis:  ' + text});
           $div.css('white-space', 'pre-line');
           $('#log').append('<br>').append($div);
         }
@@ -95,6 +95,9 @@
       // Add Objective-C incoming message handlers
       window.handleVoiceMessage = function (data) {
         sendMessage(data.message, true);
+        var $div = $('<div>', { text: 'Ben:  ' + data.message });
+        $div.css('white-space', 'pre-line');
+        $('#log').append('<br>').append($div);
       };
     });
 
