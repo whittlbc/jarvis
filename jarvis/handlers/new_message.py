@@ -1,57 +1,54 @@
 from jarvis.core.message import Message
-from jarvis import logger, predictor
+# from jarvis import logger, predictor
 from jarvis.learn.converse.rnn import Rnn
 import jarvis.actions.errors as errors
 import jarvis.actions.core as core
 import jarvis.helpers.helpers as helpers
-import jarvis.helpers.db as db
-from jarvis.helpers.memory_helper import store_memory, fetch_memory
+# import jarvis.helpers.db as db
+# from jarvis.helpers.memory_helper import store_memory, fetch_memory
 import re
 
 rnn = Rnn()
+
 
 def perform(e):
 	message = Message(e)
 		
 	# Do nothing if empty text
 	if not message.text.strip(): return
-	
-	import code; code.interact(local=dict(globals(), **locals()))
-	
-	# Run through our registered text matches, regex patterns, etc.
-	# before using our trained model to make the prediction
+		
 	if matches_text_pattern(message): return
 			
 	# Load the model if it hasn't already been loaded.
-	predictor.load_model()
+	# predictor.load_model()
 	
 	# Predict an action to perform based on the user's input.
-	action, confident_enough = predictor.predict(message.text)
+	# action, confident_enough = predictor.predict(message.text)
 	
 	# Save user message in persistent mongodb
-	db.save_message({'text': message.text, 'isAudio': False}, is_command=True)
+	# db.save_message({'text': message.text, 'isAudio': False}, is_command=True)
 	
-	logger.info("User Input: {};\nPredicted Action: {}".format(message.text, action))
+	# logger.info("User Input: {};\nPredicted Action: {}".format(message.text, action))
 	
 	# Only perform the predicted action if the model was confident enough
-	if confident_enough:
-		run_action(action, message)
+	# if confident_enough:
+	# 	run_action(action, message)
 		
 	# Otherwise, default to our conversational model to respond
-	else:
-		action = ''  # we don't want to update the message cache with an incorrect action...
-		converse(message)
+	# else:
+	# 	action = ''  # we don't want to update the message cache with an incorrect action...
+	# 	converse(message)
 
 	# Cache command message in redis
-	db.update_msg_cache(message.text, action)
+	# db.update_msg_cache(message.text, action)
 
 
 def matches_text_pattern(m):
 	potential_matches = [
-		try_fetching_memory,
-		try_storing_memory,
-		forget_memory,
-		list_memories,
+		# try_fetching_memory,
+		# try_storing_memory,
+		# forget_memory,
+		# list_memories,
 		google,
 		fun_fact,
 		airhorn,
@@ -67,8 +64,9 @@ def matches_text_pattern(m):
 
 
 def try_fetching_memory(m):
+	# TODO: Fix up memory fetching based on your use of api.ai or wit.ai
 	answer = fetch_memory(m.text)
-	
+
 	if answer:
 		core.remember(answer, m.is_audio)
 		return True
@@ -77,11 +75,12 @@ def try_fetching_memory(m):
 
 
 def try_storing_memory(m):
+	# TODO: Fix up memory storage based on your use of api.ai or wit.ai
 	matches = re.search('^(remember that|remember) (.*)', m.text, re.I)
 	if not matches: return False
-	
+
 	mem_phrase = matches.group(1)
-	
+
 	if store_memory(mem_phrase):
 		core.resp_new_memory(m.is_audio)
 		return True

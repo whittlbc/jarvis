@@ -86,6 +86,7 @@ def format_possession(l):
 	
 	if owner.lower() == 'you':
 		owner += 'r'
+		
 	elif owner.lower() == 'I':
 		owner = 'my'
 	else:

@@ -1,12 +1,14 @@
 import os
 from jarvis import app
-from flask import render_template, request
+from flask import render_template
 # import jarvis.learn.classify.train as trainer
 from flask_socketio import SocketIO
+from jarvis.core.response import Response
 # from jarvis.handlers import new_message
 # from jarvis.helpers.configs import configs
 # import jarvis.jobs as jobs
 # from jarvis.helpers.cache import cache
+from jarvis.handlers.message import get_response
 
 socket = SocketIO(app)
 namespace = '/master'
@@ -32,12 +34,10 @@ def on_disconnect():
 
 @socket.on('message', namespace=namespace)
 def on_message(e):
-	print "\nHEARD NEW MESSAGE: {}\n".format(e['text'])
-	# new_message.perform(e)
-
+	resp = get_response(e)
 	
-# Train our classifier
-# trainer.perform()
+	if resp:
+		socket.emit('response', resp.as_json(), namespace=namespace)
 
 # Add jobs to our scheduler
 # jobs.add_jobs(app)
@@ -45,3 +45,5 @@ def on_message(e):
 # Start our app
 if __name__ == '__main__':
 	socket.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True, use_reloader=False)
+	
+
