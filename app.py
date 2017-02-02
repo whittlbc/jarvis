@@ -22,10 +22,10 @@ def get_current_user(req):
 	session_token = req.headers.get(session_header)
 	if not session_token: raise Exception()
 	
-	session = find(Session, {'token': session_token})
+	session = find(Session, dict(token=session_token))
 	if not session: raise Exception()
 	
-	return find(User, {'id': session.user_id})
+	return find(User, dict(id=session.user_id))
 	
 
 def strip_creds_from_req(data):
@@ -40,12 +40,12 @@ def signup():
 	if not email or not pw:
 		return rh.error(**ec.INCOMPLETE_LOGIN_CREDS)
 	
-	user = find(User, {'email': email})
+	user = find(User, dict(email=email))
 	if user: return rh.error(**ec.EMAIL_TAKEN)
 	
 	try:
-		user = create(User, {'email': email, 'password': pw})
-		session = create(Session, {'user_id', user.id})
+		user = create(User, dict(email=email, password=pw))
+		session = create(Session, dict(user_id=user.id))
 		return rh.json_response(with_cookie=(cookie_name, session.token))
 	except Exception as e:
 		app.logger.error('Error signing up new user with email: {}, with error: {}'.format(email, e))
@@ -59,11 +59,11 @@ def login():
 	if not email or not pw:
 		return rh.error(**ec.INCOMPLETE_LOGIN_CREDS)
 	
-	user = find(User, {'email': email, 'password': pw})
+	user = find(User, dict(email=email, password=pw))
 	if not user: return rh.error(**ec.USER_NOT_FOUND)
 	
 	try:
-		session = create(Session, {'user_id', user.id})
+		session = create(Session, dict(user_id=user.id))
 		return rh.json_response(with_cookie=(cookie_name, session.token))
 	except Exception as e:
 		app.logger.error('Error logging in existing user with email: {}, with error: {}'.format(email, e))
