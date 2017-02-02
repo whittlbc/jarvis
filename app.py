@@ -46,6 +46,8 @@ def login():
 	if not email or not password:
 		return request_helper.error('Invalid Credentials', 500)
 	
+	
+	
 	# Find user by email/password and respond
 	# if not user:
 	# 	error('User not found', 404)
