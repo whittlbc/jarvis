@@ -25,6 +25,8 @@ def signup():
 	if not email or not password:
 		return request_helper.error('Invalid Credentials', 500)
 	
+	
+	
 	# (1) find_or_initialize_by new user with email(unique) and password
 	# error out if email already in use
 	# if email not taken yet --> good, create a new session with user_id=<new_user.id>
