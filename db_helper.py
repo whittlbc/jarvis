@@ -23,7 +23,14 @@ def where(model, params=None, session=None, unscoped=False):
 
 def find_or_initialize_by(model, params=None, session=None, unscoped=False):
 	params, session = ensure_args(params, session)
-	return find(model, params, session, unscoped) or create(model, params, session)
+	record = find(model, params, session, unscoped)
+	is_new = False
+	
+	if not record:
+		is_new = True
+		record = create(model, params, session)
+	
+	return record, is_new
 
 
 def update(model_instance, params=None, session=None):

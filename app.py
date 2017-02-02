@@ -1,14 +1,16 @@
 import os
 import json
-from jarvis import app, request_helper
+from jarvis import app
+from jarvis import request_helper as rh
 from flask import request
 from flask_socketio import SocketIO
 from jarvis.helpers.configs import config
 from jarvis.handlers.message import get_response
 from jarvis.handlers.connections import connect, disconnect
 from definitions import cookie_name, session_header
-from jarvis.helpers.user_helper import set_current_user
-
+import jarvis.helpers.error_codes as ec
+from db_helper import find, create
+from models import User, Session
 
 socket = SocketIO(app)
 namespace = '/master'
@@ -16,45 +18,56 @@ namespace = '/master'
 
 # ---- HTTP Routes ----
 
+def get_current_user(req):
+	session_token = req.headers.get(session_header)
+	if not session_token: raise Exception()
+	
+	session = find(Session, {'token': session_token})
+	if not session: raise Exception()
+	
+	return find(User, {'id': session.user_id})
+	
+
+def strip_creds_from_req(data):
+	creds = json.loads(data) or {}
+	return creds.get('email', '').strip(), creds.get('password', '').strip()
+
+
 @app.route('/signup', methods=['POST'])
 def signup():
-	creds = json.loads(request.data) or {}
-	email = creds.get('email', '').strip()
-	password = creds.get('password', '').strip()
+	email, pw = strip_creds_from_req(request.data)
 	
-	if not email or not password:
-		return request_helper.error('Invalid Credentials', 500)
+	if not email or not pw:
+		return rh.error(**ec.INCOMPLETE_LOGIN_CREDS)
 	
+	user = find(User, {'email': email})
+	if user: return rh.error(**ec.EMAIL_TAKEN)
 	
-	
-	# (1) find_or_initialize_by new user with email(unique) and password
-	# error out if email already in use
-	# if email not taken yet --> good, create a new session with user_id=<new_user.id>
-	# add newly-created session token as a cookie and return it that way
-	
-	token = request_helper.gen_session_token()  # hard-coding for now. TODO: pull this from newly-created Session record.
-	
-	return request_helper.json_response(with_cookie=(cookie_name, token))
+	try:
+		user = create(User, {'email': email, 'password': pw})
+		session = create(Session, {'user_id', user.id})
+		return rh.json_response(with_cookie=(cookie_name, session.token))
+	except Exception as e:
+		app.logger.error('Error signing up new user with email: {}, with error: {}'.format(email, e))
+		return rh.error(**ec.USER_SIGNUP_ERROR)
 
 
 @app.route('/login', methods=['POST'])
 def login():
-	creds = json.loads(request.data) or {}
-	email = creds.get('email', '').strip()
-	password = creds.get('password', '').strip()
+	email, pw = strip_creds_from_req(request.data)
 	
-	if not email or not password:
-		return request_helper.error('Invalid Credentials', 500)
+	if not email or not pw:
+		return rh.error(**ec.INCOMPLETE_LOGIN_CREDS)
 	
+	user = find(User, {'email': email, 'password': pw})
+	if not user: return rh.error(**ec.USER_NOT_FOUND)
 	
-	
-	# Find user by email/password and respond
-	# if not user:
-	# 	error('User not found', 404)
-		
-	token = request_helper.gen_session_token()  # hard-coding for now. TODO: pull this from newly-created Session record.
-
-	return request_helper.json_response(with_cookie=(cookie_name, token))
+	try:
+		session = create(Session, {'user_id', user.id})
+		return rh.json_response(with_cookie=(cookie_name, session.token))
+	except Exception as e:
+		app.logger.error('Error logging in existing user with email: {}, with error: {}'.format(email, e))
+		return rh.error(**ec.USER_LOGIN_ERROR)
 
 
 # ---- Socket Listeners ----
@@ -62,11 +75,11 @@ def login():
 @socket.on('connect', namespace=namespace)
 def on_connect():
 	app.logger.info('New User Connection')
-	user = set_current_user(request)
 	
-	if not user:
-		print 'User not found for session token'
-		return request_helper.error('Can\'t connect socket - invalid user session', 403)
+	try:
+		user = get_current_user(request)
+	except Exception:
+		return rh.error(**ec.INVALID_USER_PERMISSIONS)
 	
 	connect(request.sid, user)
 	
@@ -74,10 +87,13 @@ def on_connect():
 @socket.on('disconnect', namespace=namespace)
 def on_disconnect():
 	app.logger.info('User Disconnected')
-	user = set_current_user(request)
 	
-	if user:
-		disconnect(request.sid, user)
+	try:
+		user = get_current_user(request)
+	except Exception:
+		return rh.error(**ec.INVALID_USER_PERMISSIONS)
+
+	disconnect(request.sid, user)
 
 
 @socket.on('message', namespace=namespace)

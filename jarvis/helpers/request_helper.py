@@ -17,7 +17,7 @@ class RequestHelper(object):
 		
 		return response, status
 	
-	def error(self, message='', status=400):
+	def error(self, message='', status=500):
 		return self.json_response({'error': message}, status=status)
 
 	@staticmethod

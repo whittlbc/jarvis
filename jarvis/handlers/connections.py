@@ -8,15 +8,13 @@ from jarvis.helpers.s3 import download
 
 
 def connect(sid, user):
-	user_uid = user['uid']
-	update_user_socket_ids(user_uid, sid, onconnect=True)
-	maybe_fetch_remote_user_formulas(user_uid)
+	update_user_socket_ids(user.uid, sid, onconnect=True)
+	maybe_fetch_remote_user_formulas(user.uid)
 	
 	
 def disconnect(sid, user):
-	user_uid = user['uid']
-	update_user_socket_ids(user_uid, sid)
-	maybe_remove_cached_user_formulas(user_uid)
+	update_user_socket_ids(user.uid, sid)
+	maybe_remove_cached_user_formulas(user.uid)
 
 
 def update_user_socket_ids(user_uid, sid, onconnect=False):
