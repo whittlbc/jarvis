@@ -1,8 +1,9 @@
+from jarvis.helpers.configs import config
 from psycopg2 import connect
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import DictCursor
 
-con = connect(dbname='memory')
+con = connect(dbname=config('PG_DB_NAME'))
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
 

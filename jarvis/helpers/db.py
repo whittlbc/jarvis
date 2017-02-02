@@ -1,13 +1,13 @@
 import time
 import json
 import copy
-from configs import configs
+from jarvis.helpers.configs import config
 from pymongo import MongoClient
 from jarvis.helpers.cache import cache
 
 
-client = MongoClient(configs.MONGODB_URI)
-db = client[configs.MONGODB_NAME]
+client = MongoClient(config('MONGODB_URI'))
+db = client[config('MONGODB_NAME')]
 
 
 def insert(collection, data, remove_from_redis=None):
@@ -45,7 +45,7 @@ def users():
 
 
 def current_user():
-	return find_one_optimal('current_user', 'users', {'email': configs.USER_EMAIL})
+	return find_one_optimal('current_user', 'users', {'email': config('USER_EMAIL')})
 
 
 def service(slug):

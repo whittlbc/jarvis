@@ -1,5 +1,6 @@
 import logging
 from flask import Flask
+from jarvis.helpers.request_helper import RequestHelper
 # from jarvis.core.predictor import Predictor
 
 
@@ -12,4 +13,6 @@ app.logger.setLevel(logging.INFO)
 logger = app.logger
 
 # predictor = Predictor()
+
+request_helper = RequestHelper(app)
 

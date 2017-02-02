@@ -1,9 +1,9 @@
 import apiai
-import uuid
-from jarvis.helpers.configs import configs
+from jarvis.helpers.configs import config
 from jarvis.core.response import Response
+from jarvis import request_helper
 
-ai = apiai.ApiAI(configs.APIAI_CLIENT_ACCESS_TOKEN)
+ai = apiai.ApiAI(config('APIAI_CLIENT_ACCESS_TOKEN'))
 
 
 def get_response(e):
@@ -29,7 +29,7 @@ def intent_from_formula(query=''):
 
 def intent_from_api(query=''):
 	request = ai.text_request()
-	request.session_id = uuid.uuid4().hex
+	request.session_id = request_helper.gen_session_token()
 	request.query = query
 	return request.getresponse().read()
 
