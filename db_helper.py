@@ -3,27 +3,27 @@ from jarvis import db, logger
 IS_DESTROYED = 'is_destroyed'
 
 
-def find(model, params=None, session=None):
+def find(model, params=None, session=None, unscoped=False):
 	params, session = ensure_args(params, session)
 	
-	if hasattr(model, IS_DESTROYED) and not params.get(IS_DESTROYED):
+	if hasattr(model, IS_DESTROYED) and not params.get(IS_DESTROYED) and not unscoped:
 		params[IS_DESTROYED] = False
 	
 	return session.query(model).filter_by(**params).first()
 
 
-def where(model, params=None, session=None):
+def where(model, params=None, session=None, unscoped=False):
 	params, session = ensure_args(params, session)
 	
-	if hasattr(model, IS_DESTROYED) and not params.get(IS_DESTROYED):
+	if hasattr(model, IS_DESTROYED) and not params.get(IS_DESTROYED) and not unscoped:
 		params[IS_DESTROYED] = False
 		
 	return session.query(model).filter_by(**params).all()
 
 
-def find_or_initialize_by(model, params=None, session=None):
+def find_or_initialize_by(model, params=None, session=None, unscoped=False):
 	params, session = ensure_args(params, session)
-	return find(model, params, session) or create(model, params, session)
+	return find(model, params, session, unscoped) or create(model, params, session)
 
 
 def update(model_instance, params=None, session=None):
@@ -114,7 +114,7 @@ def delete(model, params=None, session=None):
 	
 	if result:
 		try:
-			session.remove(result)
+			session.delete(result)
 			session.commit()
 			return True
 		except Exception as e:
@@ -127,7 +127,7 @@ def delete_instance(model_instance, session=None):
 	session = session or create_session()
 	
 	try:
-		session.remove(model_instance)
+		session.delete(model_instance)
 		session.commit()
 		return True
 	except Exception as e:

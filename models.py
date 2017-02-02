@@ -11,7 +11,7 @@ class User(db.Model):
 	created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 	is_destroyed = db.Column(db.Boolean, server_default='f')
 	
-	def __init__(self, email, name):
+	def __init__(self, email=None, name=None):
 		self.email = email
 		self.name = name
 	
