@@ -24,7 +24,7 @@ request_helper = RequestHelper(app)
 db = SQLAlchemy(app)
 
 # import our models
-from models import User, Session
+from models import User, Session, Formula, UserFormula
 
 
 

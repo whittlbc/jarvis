@@ -14,11 +14,24 @@ def find(model, params=None, session=None, unscoped=False):
 
 def where(model, params=None, session=None, unscoped=False):
 	params, session = ensure_args(params, session)
+	exact_params = {}
+	list_params = {}
 	
-	if hasattr(model, IS_DESTROYED) and not params.get(IS_DESTROYED) and not unscoped:
-		params[IS_DESTROYED] = False
+	for k, v in params.iteritems():
+		if type(v).__name__ in ['list', 'tuple']:
+			list_params[k] = tuple(v)
+		else:
+			exact_params[k] = v
+			
+	if hasattr(model, IS_DESTROYED) and not exact_params.get(IS_DESTROYED) and not unscoped:
+		exact_params[IS_DESTROYED] = False
 		
-	return session.query(model).filter_by(**params).all()
+	query = session.query(model).filter_by(**exact_params)
+	
+	for k, v in list_params.iteritems():
+		query = query.filter(getattr(model, k).in_(v))
+		
+	return query.all()
 
 
 def find_or_initialize_by(model, params=None, session=None, unscoped=False):
