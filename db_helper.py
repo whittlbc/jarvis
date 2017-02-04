@@ -1,4 +1,5 @@
-from jarvis import db, logger
+from jarvis import db
+
 
 IS_DESTROYED = 'is_destroyed'
 
@@ -52,25 +53,23 @@ def update(model_instance, params=None, session=None):
 	try:
 		[setattr(model_instance, k, v) for k, v in params.iteritems()]
 		session.commit()
-		return model_instance
 	except Exception as e:
-		logger.error('Error updating {} with params: {} with error: {}'.format(type(model_instance).__name__, params, e))
-
-	return None
+		raise Exception('Error updating {} with params: {} with error: {}'.format(type(model_instance).__name__, params, e.message))
 	
+	return model_instance
+
 
 def create(model, params=None, session=None):
 	params, session = ensure_args(params, session)
 	model_instance = model(**params)
 	
 	try:
-		db.session.add(model_instance)
-		db.session.commit()
-		return model_instance
+		session.add(model_instance)
+		session.commit()
 	except Exception as e:
-		logger.error('Error creating {} with params: {} with error: {}'.format(model, params, e))
-	
-	return None
+		raise Exception('Error creating {} with params: {} with error: {}'.format(model, params, e.message))
+		
+	return model_instance
 	
 
 def destroy(model, params=None, session=None):
@@ -100,8 +99,7 @@ def destroy_instance(model_instance, session=None):
 
 def undestroy(model, params=None, session=None):
 	if not hasattr(model, IS_DESTROYED):
-		logger.error('Can\'t undestroyed a model ({}) without an \'is_destroyed\' column.'.format(model))
-		return False
+		raise Exception('Can\'t undestroyed a model ({}) without an \'is_destroyed\' column.'.format(model))
 	
 	params, session = ensure_args(params, session)
 	result = find(model, params, session)
@@ -110,17 +108,17 @@ def undestroy(model, params=None, session=None):
 		try:
 			result.is_destroyed = False
 			session.commit()
-			return True
 		except Exception as e:
-			logger.error('Error creating {} with params: {} with error: {}'.format(model, params, e))
-	
-	return False
+			raise Exception('Error creating {} with params: {} with error: {}'.format(model, params, e.message))
+		
+		return True
+	else:
+		return False
 
 
 def undestroy_instance(model_instance, session=None):
 	if not hasattr(model_instance, IS_DESTROYED):
-		logger.error('Can\'t undestroyed a model ({}) without an \'is_destroyed\' column.'.format(type(model_instance).__name__))
-		return False
+		raise Exception('Can\'t undestroyed a model ({}) without an \'is_destroyed\' column.'.format(type(model_instance).__name__))
 
 	session = session or create_session()
 	model_instance.is_destroyed = False
@@ -136,11 +134,12 @@ def delete(model, params=None, session=None):
 		try:
 			session.delete(result)
 			session.commit()
-			return True
 		except Exception as e:
-			logger.error('Error deleting {} with params: {} with error: {}'.format(model, params, e))
-	
-	return False
+			raise Exception('Error deleting {} with params: {} with error: {}'.format(model, params, e.message))
+		
+		return True
+	else:
+		return False
 
 
 def delete_instance(model_instance, session=None):
@@ -149,11 +148,10 @@ def delete_instance(model_instance, session=None):
 	try:
 		session.delete(model_instance)
 		session.commit()
-		return True
 	except Exception as e:
-		logger.error('Error deleting {} with error: {}'.format(type(model_instance).__name__, e))
+		raise Exception('Error deleting {} with error: {}'.format(type(model_instance).__name__, e.message))
 	
-	return False
+	return True
 	
 	
 def create_session():

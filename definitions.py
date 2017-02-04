@@ -13,3 +13,6 @@ converse_data_path = basedir + '/data/converse'
 
 cookie_name = 'JARVIS_COOKIE'
 session_header = 'Jarvis-Api-Token'
+
+formula_uploads_path = basedir + '/tmp/formulas'
+formula_uploads_module = 'tmp.formulas'

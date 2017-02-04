@@ -1,22 +1,25 @@
 import os
 import json
-from jarvis import app
+from jarvis import app, logger
 from jarvis import request_helper as rh
 from flask import request
 from flask_socketio import SocketIO
 from jarvis.helpers.configs import config
 from jarvis.handlers.message import get_response
 from jarvis.handlers.connections import connect, disconnect
-from definitions import cookie_name, session_header
+from definitions import cookie_name, session_header, formula_uploads_path, formula_uploads_module
 import jarvis.helpers.error_codes as ec
-from db_helper import find, create
-from models import User, Session
+from jarvis.helpers.s3 import upload
+from db_helper import find, create, create_session
+from models import User, Session, Formula, UserFormula
+
 
 socket = SocketIO(app)
 namespace = '/master'
 
 
 # ---- HTTP Routes ----
+
 
 def get_current_user(req):
 	session_token = req.headers.get(session_header)
@@ -31,6 +34,29 @@ def get_current_user(req):
 def strip_creds_from_req(data):
 	creds = json.loads(data) or {}
 	return creds.get('email', '').strip(), creds.get('password', '').strip()
+
+
+def is_python_file(filename):
+	return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'py'
+
+
+# This whole thing should prolly be it's own service
+def is_valid_formula(filename):
+	try:
+		formula = __import__('{}.{}'.format(formula_uploads_module, filename), globals(), locals(), ['object'], -1)
+	except ImportError as e:
+		logger.error('Error importing tmp formula: {}, with error: {}'.format(filename, e.message))
+		return False
+	
+	if not hasattr(formula, 'Formula'):
+		logger.error('formula module has no class, Formula, as an attribute.')
+		return False
+	
+	formula_klass = formula.Formula
+	
+	# Validate the attributes on formula class
+	
+	return True
 
 
 @app.route('/signup', methods=['POST'])
@@ -70,6 +96,51 @@ def login():
 		return rh.error(**ec.USER_LOGIN_ERROR)
 
 
+@app.route('/formula', methods=['POST'])
+def new_formula():
+	# Get current user
+	try:
+		user = get_current_user(request)
+	except Exception:
+		return rh.error(**ec.INVALID_USER_PERMISSIONS)
+	
+	# Ensure there's a file
+	file = (request.files or {}).get('file')
+	
+	if not file:
+		return rh.error(**ec.FORMULA_UPLOAD_NO_FILE)
+
+	# Ensure it's a python file
+	if not is_python_file(file.filename):
+		return rh.error(**ec.FORMULA_UPLOAD_INVALID_FILE_EXT)
+	
+	# Save file to tmp formula location
+	tmp_filename = rh.gen_session_token()
+	tmp_filepath = '{}/{}.py'.format(formula_uploads_path, tmp_filename)
+	file.save(tmp_filepath)
+	
+	# Validate the contents of the formula file
+	if not is_valid_formula(tmp_filename):
+		os.remove(tmp_filepath)
+		return rh.error(**ec.INVALID_FORMULA_FORMAT)
+	
+	# Create new Formula and UserFormula records in the DB
+	session = create_session()
+	
+	try:
+		formula = create(Formula, session=session)
+		create(UserFormula, {'user_id': user.id, 'formula_id': formula.id, 'is_owner': True}, session=session)
+	except Exception as e:
+		return rh.error(e.message, 500)
+	
+	session.commit()
+	
+	# Upload formula file to S3
+	upload(tmp_filepath, '{}/{}.py'.format(config('S3_FORMULAS_DIR'), formula.uid))
+	
+	return rh.json_response()
+
+	
 # ---- Socket Listeners ----
 
 @socket.on('connect', namespace=namespace)
