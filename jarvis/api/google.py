@@ -3,9 +3,8 @@ from jarvis.api.wrapper import Wrapper
 
 class Google(Wrapper):
 	
-	def __init__(self):
-		self.slug = __name__.split('.').pop()
-		Wrapper.__init__(self, self.slug)
+	def __init__(self, user):
+		Wrapper.__init__(self, __name__.split('.').pop(), user)
 		
 	def search(self, query=None):
 		if query is None: return None
