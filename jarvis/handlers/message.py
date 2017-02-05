@@ -1,29 +1,56 @@
 import apiai
 from jarvis.helpers.configs import config
-from jarvis.core.response import Response
-from jarvis import request_helper
+from jarvis import request_helper, logger
+from db_helper import where
+from models import Formula, UserFormula
+from jarvis.helpers.formulas_helper import find_matching_formula
+from jarvis.actions import klass_method_for_action
+from definitions import unknown_action
+import json
+
 
 ai = apiai.ApiAI(config('APIAI_CLIENT_ACCESS_TOKEN'))
 
 
-def get_response(e):
+def get_response(e, user):
 	query = e['text']
 	
 	# Ensure query isn't blank
-	if not query.strip(): return
+	if not query.strip(): return None
 	
-	# Step 1: Convert query(string) to intent(JSON) -- user-defined formulas take priority.
-	intent = intent_from_formula(query) or intent_from_api(query)
-	if not intent: return
+	# Priority 1: See if any user-defined formulas are triggered by this query
+	formula_ids = [uf.formula_id for uf in where(UserFormula, {'user_id': user.id})]
 	
-	# Step 2: Convert intent to performable actions
-	actions = intent_to_actions(intent)
+	if formula_ids:
+		formula_uids = [f.uid for f in where(Formula, {'id': formula_ids})]  # prolly should order by created_by as well
+		
+		# Grab the first Formula class that is triggered by this query (if any)
+		matching_formula = find_matching_formula(formula_uids, query)
+		
+		# Execute the formula's "triggered" callback
+		if matching_formula:
+			matching_formula.perform()
+			
+			return matching_formula.respond()  # should return Response object
+		
+	# Priority 2: See if any core actions are triggered by this query
 	
-	# Need to figure out how to perform each action and then return a Response object if that was an action
-	return None
-
-
-def intent_from_formula(query=''):
+	# Convert query(string) to intent(JSON) using Api.ai
+	intent = intent_from_api(query)
+	if not intent: return None
+	
+	action, params = action_from_intent(intent)
+	
+	if not action or action == unknown_action:
+		return None
+	
+	action_klass, action_method = klass_method_for_action(action)
+	
+	if action_klass and action_method:
+		action_instance = action_klass(params, user, with_voice=e['withVoice'])
+		
+		return getattr(action_instance, action_method)()
+	
 	return None
 
 
@@ -34,5 +61,16 @@ def intent_from_api(query=''):
 	return request.getresponse().read()
 
 
-def intent_to_actions(intent):
-	return []
+def action_from_intent(intent):
+	result = None
+	
+	try:
+		json_intent = json.loads(intent) or {}
+		result = json_intent.get('result')
+	except:
+		logger.error('Error parsing JSON response from API.ai')
+	
+	if result:
+		return result.get('action'), result.get('parameters')
+	
+	return None, None

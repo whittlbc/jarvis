@@ -138,6 +138,9 @@ def new_formula():
 	# Upload formula file to S3
 	upload(tmp_filepath, '{}/{}.py'.format(config('S3_FORMULAS_DIR'), formula.uid))
 	
+	# Remove file from tmp directory
+	os.remove(tmp_filepath)
+	
 	return rh.json_response()
 
 	
@@ -169,7 +172,12 @@ def on_disconnect():
 
 @socket.on('message', namespace=namespace)
 def on_message(e):
-	resp = get_response(e)
+	try:
+		user = get_current_user(request)
+	except Exception:
+		return rh.error(**ec.INVALID_USER_PERMISSIONS)
+
+	resp = get_response(e, user)
 	
 	if resp:
 		socket.emit('response', resp.as_json(), namespace=namespace)

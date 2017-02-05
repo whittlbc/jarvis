@@ -16,3 +16,5 @@ session_header = 'Jarvis-Api-Token'
 
 formula_uploads_path = basedir + '/tmp/formulas'
 formula_uploads_module = 'tmp.formulas'
+
+unknown_action = 'input.unknown'
