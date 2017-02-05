@@ -9,10 +9,8 @@ class WeatherData(AbstractAction):
 	def __init__(self, params, user, with_voice=False):
 		AbstractAction.__init__(self, params, user, with_voice=with_voice)
 		self.api = Weather(self.user)
-		print "INITIALIZING SHIT"
 	
 	def search(self):
-		print "SEARCHING WITH PARAMS: {}".format(self.params)
 		if self.params.get('current_time') == 'true':
 			return self.current()
 		else:
