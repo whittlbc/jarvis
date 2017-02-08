@@ -8,6 +8,5 @@ action_map = {
 	'weather.search': (WeatherData, 'search')
 }
 
-
 def klass_method_for_action(action=''):
 	return action_map.get(action)

@@ -149,7 +149,7 @@ def new_formula():
 @socket.on('connect', namespace=namespace)
 def on_connect():
 	app.logger.info('New User Connection')
-	
+		
 	try:
 		user = get_current_user(request)
 	except Exception:
@@ -157,6 +157,23 @@ def on_connect():
 	
 	connect(request.sid, user)
 	
+
+@socket.on('fetch:user_info', namespace=namespace)
+def on_fetch_user_info():
+	try:
+		user = get_current_user(request)
+	except Exception:
+		return rh.error(**ec.INVALID_USER_PERMISSIONS)
+	
+	with open('actions.json') as f:
+		resp = {
+			'actions': json.load(f),
+			'user_name': user.name,
+			'bot_name': user.botname
+		}
+		
+		socket.emit('user_info:fetched', resp, namespace=namespace)
+
 
 @socket.on('disconnect', namespace=namespace)
 def on_disconnect():
