@@ -34,7 +34,7 @@
       ]
     },
     {
-      "pattern": "^(good night|night) <BOT_NAME>$",
+      "pattern": "^(good night|goodnight|night) <BOT_NAME>$",
       "responses": [
         "Good night!",
         "Night!",
