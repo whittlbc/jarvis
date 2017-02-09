@@ -11,6 +11,39 @@
         "Good morning <USER_NAME>!",
         "Morning <USER_NAME>!"
       ]
+    },
+    {
+      "pattern": "^good afternoon <BOT_NAME>$",
+      "responses": [
+        "Good afternoon!",
+        "Good afternoon <USER_NAME>!"
+      ]
+    },
+    {
+      "pattern": "^good day <BOT_NAME>$",
+      "responses": [
+        "Good day!",
+        "Good day <USER_NAME>!"
+      ]
+    },
+    {
+      "pattern": "^good evening <BOT_NAME>$",
+      "responses": [
+        "Good evening!",
+        "Good evening <USER_NAME>!"
+      ]
+    },
+    {
+      "pattern": "^(good night|night) <BOT_NAME>$",
+      "responses": [
+        "Good night!",
+        "Night!",
+        "Night buddy!",
+        "Good night <USER_NAME>!",
+        "Night <USER_NAME>!",
+        "Sleep tight!",
+        "Sleep tight <USER_NAME>!"
+      ]
     }
   ]
 }

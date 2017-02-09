@@ -3,9 +3,10 @@ from jarvis.core.response import Response
 
 class AbstractAction(object):
 	
-	def __init__(self, params, user, with_voice=False):
+	def __init__(self, params, user, user_metadata, with_voice=False):
 		self.params = params or {}
 		self.user = user
+		self.user_metadata = user_metadata
 		self.with_voice = with_voice
 		
 	def respond(self, text=None, with_voice=None, soundbite_url=None, attachments=None):

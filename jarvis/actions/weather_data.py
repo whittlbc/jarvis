@@ -6,29 +6,62 @@ from jarvis import logger
 
 class WeatherData(AbstractAction):
 	
-	def __init__(self, params, user, with_voice=False):
-		AbstractAction.__init__(self, params, user, with_voice=with_voice)
+	def __init__(self, params, user, user_metadata, with_voice=False):
+		AbstractAction.__init__(self, params, user, user_metadata, with_voice=with_voice)
 		self.api = Weather(self.user)
-	
-	def search(self):
-		if self.params.get('current_time') == 'true':
-			return self.current()
-		else:
-			return None
-				
-	def current(self):
-		current_loc = 'Palo Alto,us'
+		self.specified_loc = self.specified_date = self.specified_time = False
+		self.set_location()
+		self.set_date()
+		self.set_time()
 		
+	def set_location(self):
+		if self.params.get('location'):
+			self.requested_loc = self.params['location']
+			self.specified_loc = True
+		else:
+			user_loc = self.user_metadata.get('location', {})
+			self.requested_loc = '{},{}'.format(user_loc.get('city'), user_loc.get('countryCode').lower())
+		
+	def set_date(self):
+		if self.params.get('date'):
+			self.requested_date = self.params['date']
+			self.specified_date = True
+		else:
+			self.requested_date = self.user_metadata.get('date')
+			
+	def set_time(self):
+		if self.params.get('time'):
+			self.requested_time = self.params['time']
+			self.specified_time = True
+		else:
+			self.requested_time = self.user_metadata.get('time')
+			
+	def search(self):
 		try:
-			weather = self.api.weather_at_place(current_loc).get_weather()
-			if not weather: return None
+			response = None
 			
-			temp = weather.get_temperature()
-			if not temp: return None
+			if self.specified_date or self.specified_time:
+				forecast = self.api.daily_forecast(self.requested_loc).get_forecast()
+				datetime = '{} {}:00+00'.format(self.requested_date, self.requested_time)
+				weather = forecast.get_weather_at(datetime)
+				
+				if weather:
+					status = weather.get_detailed_status()
+					temp_info = weather.get_temperature()
+					response = 'There should be {} with a high of {} and a low of {}.'.format(status, k2f(temp_info['max']), k2f(temp_info['min']))
+			else:
+				weather = self.api.weather_at_place(self.requested_loc).get_weather()
+				
+				if weather:
+					status = weather.get_detailed_status()
+					temp_info = weather.get_temperature()
+					response = 'It\'s currently {} with {}.'.format(k2f(temp_info['temp']), status)
+				
+			if not response:
+				return None
 			
-			temp = k2f(temp['temp'])
-			return self.respond("It's currently {} degrees outside.".format(temp))
+			return self.respond(response)
 		except Exception as e:
-			logger.error('Error trying to get current weather data for {}, with error: {}'.format(current_loc, e.message))
+			logger.error('Error trying to get current weather data for {}, with error: {}'.format(self.requested_loc, e.message))
 		
 		return None
