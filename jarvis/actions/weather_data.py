@@ -55,7 +55,7 @@ class WeatherData(AbstractAction):
 				if weather:
 					status = weather.get_detailed_status()
 					temp_info = weather.get_temperature()
-					response = 'It\'s currently {} with {}.'.format(k2f(temp_info['temp']), status)
+					response = 'It\'s currently {} degrees with {}.'.format(k2f(temp_info['temp']), status)
 				
 			if not response:
 				return None
