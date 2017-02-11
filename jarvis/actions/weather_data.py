@@ -40,10 +40,14 @@ class WeatherData(AbstractAction):
 		try:
 			response = None
 			
+			print("LOCATION: {}".format(self.requested_loc))
+			print("DATE: {}".format(self.requested_date))
+			print("TIME: {}".format(self.requested_time))
+			
 			if self.specified_date or self.specified_time:
-				forecast = self.api.daily_forecast(self.requested_loc).get_forecast()
+				forecaster = self.api.daily_forecast(self.requested_loc)
 				datetime = '{} {}:00+00'.format(self.requested_date, self.requested_time)
-				weather = forecast.get_weather_at(datetime)
+				weather = forecaster.get_weather_at(datetime)
 				
 				if weather:
 					status = weather.get_detailed_status()

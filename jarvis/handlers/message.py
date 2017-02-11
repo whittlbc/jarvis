@@ -14,7 +14,7 @@ ai = apiai.ApiAI(config('APIAI_CLIENT_ACCESS_TOKEN'))
 
 def get_response(e, user):
 	intent = e.get('intent', {})
-	params = intent.get('parameters', {})
+	params = intent.get('params', {})
 	user_metadata = e.get('userMetadata', {})
 	# query = intent.get('resolvedQuery', '')
 	#
