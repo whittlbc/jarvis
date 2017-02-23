@@ -1,14 +1,14 @@
 from abstract_action import AbstractAction
-from jarvis.api.weather import Weather
+from jarvis.api.weather import WeatherApi
 from jarvis.helpers.weather_helper import k2f
 from jarvis import logger
 
 
-class WeatherData(AbstractAction):
+class Weather(AbstractAction):
 	
-	def __init__(self, params, user, user_metadata, with_voice=False):
-		AbstractAction.__init__(self, params, user, user_metadata, with_voice=with_voice)
-		self.api = Weather(self.user)
+	def __init__(self, **kwargs):
+		AbstractAction.__init__(self, **kwargs)
+		self.api = WeatherApi(self.user)
 		self.specified_loc = self.specified_date = self.specified_time = False
 		self.set_location()
 		self.set_date()

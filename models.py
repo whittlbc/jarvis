@@ -1,6 +1,8 @@
 import datetime
 from jarvis import db, request_helper
+from sqlalchemy.dialects.postgresql import JSON
 from slugify import slugify
+from jarvis.helpers.pending_ride_helper import RideStatus
 
 
 class User(db.Model):
@@ -115,11 +117,12 @@ class Integration(db.Model):
 	created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 	is_destroyed = db.Column(db.Boolean, server_default='f')
 	
-	def __init__(self, name=None, logo=None, url=None):
+	def __init__(self, name=None, logo=None, url=None, user_specific=False):
 		self.name = name
 		self.slug = slugify(name, separator='_')
 		self.logo = logo
 		self.url = url
+		self.user_specific = user_specific
 	
 	def __repr__(self):
 		return '<Integration(id={}, uid={}, name={}, slug={}, logo={}, url={}, user_specific={}, created_at={}, is_destroyed={})>'.format(
@@ -159,3 +162,40 @@ class UserIntegration(db.Model):
 			self.created_at,
 			self.is_destroyed
 		)
+
+
+class PendingRide(db.Model):
+	__tablename__ = 'pending_ride'
+	
+	id = db.Column(db.Integer, primary_key=True)
+	uid = db.Column(db.String, default=request_helper.gen_session_token, index=True)
+	user_integration_id = db.Column(db.Integer, nullable=False)
+	start_coord = db.Column(JSON)
+	end_coord = db.Column(JSON)
+	fare = db.Column(JSON)
+	meta = db.Column(JSON)
+	status = db.Column(db.Integer, default=RideStatus.REQUESTED, nullable=False)
+	created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+	is_destroyed = db.Column(db.Boolean, server_default='f')
+	
+	def __init__(self, user_integration_id, start_coord=None, end_coord=None, fare=None, meta=None):
+		self.user_integration_id = user_integration_id
+		self.start_coord = start_coord
+		self.end_coord = end_coord
+		self.fare = fare
+		self.meta = meta
+	
+	def __repr__(self):
+		return '<PendingRide(id={}, uid={}, user_integration_id={}, start_coord={}, end_coord={}, fare={}, meta={}, status={}, created_at={}, is_destroyed={})>'.format(
+			self.id,
+			self.uid,
+			self.user_integration_id,
+			self.start_coord,
+			self.end_coord,
+			self.fare,
+			self.meta,
+			self.status,
+			self.created_at,
+			self.is_destroyed
+		)
+

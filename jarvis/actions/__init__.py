@@ -1,12 +1,14 @@
-from converse import Converse
-from weather_data import WeatherData
+from jarvis.actions.weather import Weather
+from jarvis.actions.uber import Uber
 
 
 action_map = {
-	'input.greeting': (Converse, 'greet'),
-	'input.good_morning': (Converse, 'morning'),
-	'weather.search': (WeatherData, 'search')
+	'weather.search': (Weather, 'search'),
+	'uber.request': (Uber, 'request_ride'),
+	'uber.specify_destination': (Uber, 'specify_destination'),
+	'uber.confirm_request': (Uber, 'confirm_ride_request')
 }
+
 
 def klass_method_for_action(action=''):
 	return action_map.get(action)

@@ -1,0 +1,8 @@
+
+class RideStatus:
+	REQUESTED = 0  # Default
+	ACCEPTED = 1
+	ARRIVED_AT_PICKUP = 2
+	ON_RIDE = 3
+	ARRIVED_AT_DESTINATION = 4
+	ENDED = 5
