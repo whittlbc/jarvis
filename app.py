@@ -10,10 +10,9 @@ from jarvis.handlers.connections import connect, disconnect
 from definitions import cookie_name, session_header, formula_uploads_path, formula_uploads_module
 import jarvis.helpers.error_codes as ec
 from jarvis.helpers.s3 import upload
-from db_helper import find, create, create_session
-from models import User, Session, Formula, UserFormula, Integration
-from jarvis.helpers.integration_helper import oauth_url_for_integration
-
+from db_helper import find, create, create_session, find_or_initialize_by
+from models import User, Session, Formula, UserFormula, Integration, UserIntegration
+from jarvis.helpers.integration_helper import oauth_url_for_integration, uber_auth_flow
 
 socket = SocketIO(app)
 namespace = '/master'
@@ -25,7 +24,7 @@ def parse_req_data(req):
 	data = {}
 	
 	if req.method == 'GET' and req.args:
-		data = dict(req.args)
+		data = dict(req.args.items())
 	elif req.method != 'GET' and req.data:
 		data = json.loads(req.data) or {}
 
@@ -157,12 +156,11 @@ def new_formula():
 @app.route('/integrations/oauth_url', methods=['GET'])
 def get_integration_oauth_url():
 	try:
-		get_current_user(request)
+		user = get_current_user(request)
 	except Exception:
 		return rh.error(**ec.INVALID_USER_PERMISSIONS)
-	
-	params = parse_req_data(request)
-	integration_slug = (params.get('slug') or [None])[0]
+		
+	integration_slug = parse_req_data(request).get('slug')
 	
 	if not integration_slug:
 		return rh.error(message='slug required to identify integration')
@@ -172,12 +170,57 @@ def get_integration_oauth_url():
 	if not integration:
 		return rh.error(**ec.INTEGRATION_NOT_FOUND)
 	
-	oauth_url = oauth_url_for_integration(integration)
+	oauth_url = oauth_url_for_integration(integration, user=user)
 	
 	if not oauth_url:
 		return rh.error(message='Couldn\'t get oauth url for integration with slug: {}'.format(integration_slug))
 	
 	return rh.json_response(data={'url': oauth_url})
+
+
+@app.route('/oauth/uber', methods=['GET'])
+def uber_oauth_response():
+	integration = find(Integration, {'slug': 'uber'})
+	
+	if not integration:
+		return rh.error(**ec.INTEGRATION_NOT_FOUND)
+	
+	# Parse the state token out of the params (which is the user's uid)
+	state_token = parse_req_data(request).get('state')
+
+	# Make sure a user actually exists for this uid...otherwise nothing else matters.
+	user = find(User, {'uid': state_token})
+
+	if not user:
+		logger.error('User not found for uid: {}'.format(state_token))
+		return rh.error(**ec.USER_NOT_FOUND)
+
+	# Finish the OAuth flow by getting a session/access_token for this user
+	auth_flow = uber_auth_flow(state_token, integration)
+	session = auth_flow.get_session(request.url)
+	cred = session.oauth2credential
+
+	ui_data = {
+		'user_id': user.id,
+		'integration_id': integration.id,
+		'access_token': cred.access_token,
+		'refresh_token': cred.refresh_token,
+		'meta': {
+			'expires_in_seconds': cred.expires_in_seconds,
+			'grant_type': cred.grant_type
+		}
+	}
+	
+	# Add ^these columns to the DB
+
+	try:
+		find_or_initialize_by(UserIntegration, ui_data)
+	except Exception as e:
+		logger.error('Error running find_or_initialize for UserIntegration with params {} with error {}'.format(ui_data, e.message))
+		return rh.error(message="Error creating/updating UserIntegration instance on Uber OAuth callback")
+	
+	# This will just return a json object...figure out how to redirect the client back to the app
+	return rh.json_response()
 
 	
 # ---- Socket Listeners ----
