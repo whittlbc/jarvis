@@ -1,7 +1,5 @@
 {
-  "attentionPrompts": [
-    "^(hey|ok|okay|yo) (<BOT_NAME>|Jarvis)$"
-  ],
+  "attentionPrompt": "^(hey |ok |okay |yo |)(<BOT_NAME>|Jarvis|Estella)(.*)",
   "customPrompts": [
     {
       "pattern": "^(good morning|morning) <BOT_NAME>$",
