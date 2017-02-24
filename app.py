@@ -11,7 +11,8 @@ from definitions import cookie_name, session_header, formula_uploads_path, formu
 import jarvis.helpers.error_codes as ec
 from jarvis.helpers.s3 import upload
 from db_helper import find, create, create_session
-from models import User, Session, Formula, UserFormula
+from models import User, Session, Formula, UserFormula, Integration
+from jarvis.helpers.integration_helper import oauth_url_for_integration
 
 
 socket = SocketIO(app)
@@ -19,6 +20,16 @@ namespace = '/master'
 
 
 # ---- HTTP Routes ----
+
+def parse_req_data(req):
+	data = {}
+	
+	if req.method == 'GET' and req.args:
+		data = dict(req.args)
+	elif req.method != 'GET' and req.data:
+		data = json.loads(req.data) or {}
+
+	return data
 
 
 def get_current_user(req):
@@ -98,7 +109,6 @@ def login():
 
 @app.route('/formula', methods=['POST'])
 def new_formula():
-	# Get current user
 	try:
 		user = get_current_user(request)
 	except Exception:
@@ -142,6 +152,32 @@ def new_formula():
 	os.remove(tmp_filepath)
 	
 	return rh.json_response()
+
+
+@app.route('/integrations/oauth_url', methods=['GET'])
+def get_integration_oauth_url():
+	try:
+		get_current_user(request)
+	except Exception:
+		return rh.error(**ec.INVALID_USER_PERMISSIONS)
+	
+	params = parse_req_data(request)
+	integration_slug = (params.get('slug') or [None])[0]
+	
+	if not integration_slug:
+		return rh.error(message='slug required to identify integration')
+	
+	integration = find(Integration, {'slug': integration_slug})
+	
+	if not integration:
+		return rh.error(**ec.INTEGRATION_NOT_FOUND)
+	
+	oauth_url = oauth_url_for_integration(integration)
+	
+	if not oauth_url:
+		return rh.error(message='Couldn\'t get oauth url for integration with slug: {}'.format(integration_slug))
+	
+	return rh.json_response(data={'url': oauth_url})
 
 	
 # ---- Socket Listeners ----
