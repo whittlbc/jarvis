@@ -145,20 +145,26 @@ class UserIntegration(db.Model):
 	user_id = db.Column(db.Integer, index=True, nullable=False)
 	integration_id = db.Column(db.Integer, index=True, nullable=False)
 	access_token = db.Column(db.String)
+	refresh_token = db.Column(db.String)
+	meta = db.Column(JSON)
 	created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 	is_destroyed = db.Column(db.Boolean, server_default='f')
 	
-	def __init__(self, user_id, integration_id, access_token=None):
+	def __init__(self, user_id=None, integration_id=None, access_token=None, refresh_token=None, meta=None):
 		self.user_id = user_id
 		self.integration_id = integration_id
 		self.access_token = access_token
+		self.refresh_token = refresh_token
+		self.meta = meta
 	
 	def __repr__(self):
-		return '<UserIntegration(id={}, user_id={}, integration_id={}, access_token={}, created_at={}, is_destroyed={})>'.format(
+		return '<UserIntegration(id={}, user_id={}, integration_id={}, access_token={}, refresh_token={}, meta={}, created_at={}, is_destroyed={})>'.format(
 			self.id,
 			self.user_id,
 			self.integration_id,
 			self.access_token,
+			self.refresh_token,
+			self.meta,
 			self.created_at,
 			self.is_destroyed
 		)

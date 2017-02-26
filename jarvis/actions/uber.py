@@ -92,9 +92,11 @@ class Uber(AbstractAction):
 			logger.error('Fare for product_id {} at location {} came back blank...'.format(product_id, start_coord))
 			return None
 		
+		print "GOT FARE: {}".format(fare)
+		
 		updated_attrs['fare'] = {
-			'id': fare['id'],
-			'price': fare['price']
+			'id': fare['fare_id'],
+			'price': fare['value']
 		}
 			
 		db.update(pending_ride, updated_attrs)
@@ -119,7 +121,7 @@ class Uber(AbstractAction):
 		if city:
 			addr_to_confirm += ' in {}'.format(city)
 		
-		confirmation_msg = 'Are you sure you want an Uber to {} for ${}?'.format(addr_to_confirm, fare['price'])
+		confirmation_msg = 'Are you sure you want an Uber to {} for ${}?'.format(addr_to_confirm, fare['value'])
 		
 		return self.respond(confirmation_msg, post_response_prompt={
 			'action': 'uber.confirm_request',
@@ -149,24 +151,24 @@ class Uber(AbstractAction):
 		if self.is_confirming():
 			response = 'Great. Ordering it now.'
 		
-		# resp = self.api.request_ride(
-		# 	product_id=required_info['product_id'],
-		# 	start_latitude=required_info['start_coord']['lat'],
-		# 	start_longitude=required_info['start_coord']['lng'],
-		# 	end_latitude=required_info['end_coord']['lat'],
-		# 	end_longitude=required_info['end_coord']['lng'],
-		# 	seat_count=1,
-		# 	fare_id=required_info['fare_id']
-		# )
-		#
-		# request_id = resp.json.get('request_id')
-		
-		# Schedule a job for this
+			resp = self.api.request_ride(
+				product_id=required_info['product_id'],
+				start_latitude=required_info['start_coord']['lat'],
+				start_longitude=required_info['start_coord']['lng'],
+				end_latitude=required_info['end_coord']['lat'],
+				end_longitude=required_info['end_coord']['lng'],
+				seat_count=1,
+				fare_id=required_info['fare_id']
+			)
+	
+			request_id = resp.json.get('request_id')
+			print 'Successfully requested Uber with id: {}'.format(request_id)
+			# Schedule a job for this
 		
 		elif self.is_declining():
 			response = 'Okay. I\'ll scratch that.'
-			
-			# Destroy this PendingRide
+			db.destroy_instance(pr)
+		
 		else:
 			response = 'I\'m not sure I understand...do you still want me to order that Uber?'
 			post_response_prompt = {
@@ -192,26 +194,24 @@ class Uber(AbstractAction):
 			return None
 		
 		# Get upfront fare for product with start/end location
-		# estimate = self.api.estimate_ride(
-		# 	product_id=product_id,
-		# 	start_latitude=start_coord['lat'],
-		# 	start_longitude=start_coord['lng'],
-		# 	end_latitude=end_coord['lat'],
-		# 	end_longitude=end_coord['lng'],
-		# 	seat_count=1
-		# )
+		estimate = self.api.estimate_ride(
+			product_id=product_id,
+			start_latitude=start_coord['lat'],
+			start_longitude=start_coord['lng'],
+			end_latitude=end_coord['lat'],
+			end_longitude=end_coord['lng'],
+			seat_count=1
+		)
 		
-		# if not estimate: return None
-		# return estimate.json.get('fare')
-		return {'id': 'fare_id', 'price': '8.52'}
+		if not estimate: return None
+		return estimate.json.get('fare')
 
 	def product_id_for_user_loc(self, coordinates):
-		return 1
-		# products_resp = self.api.get_products(coordinates['lat'], coordinates['lng'])
-		# products = products_resp.json.get('products')
-		#
-		# if not products: return None
-		# return products[0].get('product_id')
+		products_resp = self.api.get_products(coordinates['lat'], coordinates['lng'])
+		products = products_resp.json.get('products')
+
+		if not products: return None
+		return products[0].get('product_id')
 
 	def determine_end_loc(self, start_coord):
 		str_loc = ''
@@ -262,7 +262,17 @@ class Uber(AbstractAction):
 			'yeah',
 			'yep',
 			'yup',
+			'yes I do',
+			'yeah I do',
+			'yep I do',
+			'yup I do',
+			'yes I sure do',
+			'yeah I sure do',
+			'yep I sure do'
+			'yup I sure do',
+			'I sure do',
 			'yes please',
+			'You bet your ass I do',
 			'please',
 			'for sure',
 			'lets do it',

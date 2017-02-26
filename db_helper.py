@@ -35,14 +35,18 @@ def where(model, params=None, session=None, unscoped=False):
 	return query.all()
 
 
-def find_or_initialize_by(model, params=None, session=None, unscoped=False):
-	params, session = ensure_args(params, session)
-	record = find(model, params, session, unscoped)
-	is_new = False
+def find_or_initialize_by(model, find_by_params=None, update_params=None, session=None, unscoped=False):
+	find_by_params, session = ensure_args(find_by_params, session)
+	record = find(model, find_by_params.copy(), session, unscoped)
+	update_params = update_params or {}
 	
 	if not record:
 		is_new = True
-		record = create(model, params, session)
+		find_by_params.update(update_params)  # merge the 2 dicts
+		record = create(model, find_by_params, session)
+	else:
+		is_new = False
+		record = update(record, update_params, session)
 	
 	return record, is_new
 

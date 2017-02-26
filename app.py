@@ -2,7 +2,7 @@ import os
 import json
 from jarvis import app, logger
 from jarvis import request_helper as rh
-from flask import request
+from flask import request, redirect
 from flask_socketio import SocketIO
 from jarvis.helpers.configs import config
 from jarvis.handlers.message import get_response
@@ -200,9 +200,12 @@ def uber_oauth_response():
 	session = auth_flow.get_session(request.url)
 	cred = session.oauth2credential
 
-	ui_data = {
+	ui_unique_params = {
 		'user_id': user.id,
 		'integration_id': integration.id,
+	}
+	
+	ui_update_params = {
 		'access_token': cred.access_token,
 		'refresh_token': cred.refresh_token,
 		'meta': {
@@ -210,17 +213,15 @@ def uber_oauth_response():
 			'grant_type': cred.grant_type
 		}
 	}
-	
-	# Add ^these columns to the DB
 
 	try:
-		find_or_initialize_by(UserIntegration, ui_data)
+		find_or_initialize_by(UserIntegration, find_by_params=ui_unique_params, update_params=ui_update_params)
 	except Exception as e:
-		logger.error('Error running find_or_initialize for UserIntegration with params {} with error {}'.format(ui_data, e.message))
+		ui_unique_params.update(ui_update_params)
+		logger.error('Error running find_or_initialize for UserIntegration with params {} with error {}'.format(ui_unique_params, e.message))
 		return rh.error(message="Error creating/updating UserIntegration instance on Uber OAuth callback")
 	
-	# This will just return a json object...figure out how to redirect the client back to the app
-	return rh.json_response()
+	return redirect("jarvis://")
 
 	
 # ---- Socket Listeners ----
