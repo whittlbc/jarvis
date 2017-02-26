@@ -223,6 +223,12 @@ def uber_oauth_response():
 	
 	return redirect("jarvis://")
 
+
+@app.route('/uber/ride_update', methods=['POST'])
+def uber_oauth_response():
+	params = parse_req_data(request)
+	
+
 	
 # ---- Socket Listeners ----
 

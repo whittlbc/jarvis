@@ -179,6 +179,7 @@ class PendingRide(db.Model):
 	start_coord = db.Column(JSON)
 	end_coord = db.Column(JSON)
 	fare = db.Column(JSON)
+	external_ride_id = db.Column(db.String)
 	meta = db.Column(JSON)
 	status = db.Column(db.Integer, default=RideStatus.REQUESTED, nullable=False)
 	created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
@@ -192,13 +193,14 @@ class PendingRide(db.Model):
 		self.meta = meta
 	
 	def __repr__(self):
-		return '<PendingRide(id={}, uid={}, user_integration_id={}, start_coord={}, end_coord={}, fare={}, meta={}, status={}, created_at={}, is_destroyed={})>'.format(
+		return '<PendingRide(id={}, uid={}, user_integration_id={}, start_coord={}, end_coord={}, fare={}, external_ride_id={}, meta={}, status={}, created_at={}, is_destroyed={})>'.format(
 			self.id,
 			self.uid,
 			self.user_integration_id,
 			self.start_coord,
 			self.end_coord,
 			self.fare,
+			self.external_ride_id,
 			self.meta,
 			self.status,
 			self.created_at,
