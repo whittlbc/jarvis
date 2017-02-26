@@ -10,9 +10,11 @@ from jarvis.handlers.connections import connect, disconnect
 from definitions import cookie_name, session_header, formula_uploads_path, formula_uploads_module
 import jarvis.helpers.error_codes as ec
 from jarvis.helpers.s3 import upload
-from db_helper import find, create, create_session, find_or_initialize_by
-from models import User, Session, Formula, UserFormula, Integration, UserIntegration
+from db_helper import find, create, create_session, find_or_initialize_by, update, destroy_instance
+from models import User, Session, Formula, UserFormula, Integration, UserIntegration, PendingRide
 from jarvis.helpers.integration_helper import oauth_url_for_integration, uber_auth_flow
+from jarvis.helpers.cache import cache
+from jarvis.helpers.pending_ride_helper import uber_status_update
 
 socket = SocketIO(app)
 namespace = '/master'
@@ -228,7 +230,58 @@ def uber_oauth_response():
 def uber_oauth_response():
 	params = parse_req_data(request)
 	
+	event = params.get('event_type')
+	
+	if event != 'requests.status_changed':
+		logger.error('Unsure how to handle event from Uber: {}'.format(event))
+		return rh.json_response()
+	
+	metadata = params.get('meta') or {}
+	external_ride_id = metadata.get('resource_id')
+	
+	if not external_ride_id:
+		logger.error('Couldn\'t find meta.resource_id in params body...: {}'.format(params))
+		return rh.json_response()
+	
+	pending_ride = find(PendingRide, {'external_ride_id': external_ride_id})
+	
+	if not pending_ride:
+		logger.error('No Pending Ride for external_ride_id: {}'.format(external_ride_id))
+		return rh.json_response()
+		
+	user = find(User, {'id': pending_ride.user_id})
+		
+	if not user:
+		logger.error('No User for id: {}'.format(pending_ride.user_id))
+		return rh.json_response()
 
+	# Get all socket ids associated with user from cache
+	user_sids = cache.hget(config('USER_CONNECTIONS'), user.uid) or []
+	
+	if not user_sids:
+		logger.error('No open sockets registered for user with uid: {}'.format(user.uid))
+		return rh.json_response()
+	
+	status = metadata.get('status')
+	status_update = uber_status_update(status)
+	
+	if not status_update:
+		logger.error('No status update could be found for ride status: {}'.format(status))
+		return rh.json_response()
+	
+	# Update the ride even if no need to reach out to user
+	logger.info('Updating pending ride with uid {} to status of {}'.format(pending_ride.uid, status))
+	update(pending_ride, {'status', status_update['status']})
+	
+	if status_update.get('destroy_ride'):
+		destroy_instance(pending_ride)
+	
+	response_msg = status_update.get('response')
+	
+	if response_msg:
+		[socket.emit('job:update', {'text': response_msg}, namespace=namespace, room=sid) for sid in user_sids]
+	
+	return rh.json_response()
 	
 # ---- Socket Listeners ----
 

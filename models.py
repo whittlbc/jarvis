@@ -2,7 +2,6 @@ import datetime
 from jarvis import db, request_helper
 from sqlalchemy.dialects.postgresql import JSON
 from slugify import slugify
-from jarvis.helpers.pending_ride_helper import RideStatus
 
 
 class User(db.Model):
@@ -181,7 +180,7 @@ class PendingRide(db.Model):
 	fare = db.Column(JSON)
 	external_ride_id = db.Column(db.String)
 	meta = db.Column(JSON)
-	status = db.Column(db.Integer, default=RideStatus.REQUESTED, nullable=False)
+	status = db.Column(db.Integer, default=0, nullable=False)
 	created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 	is_destroyed = db.Column(db.Boolean, server_default='f')
 	

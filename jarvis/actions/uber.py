@@ -161,9 +161,9 @@ class Uber(AbstractAction):
 				fare_id=required_info['fare_id']
 			)
 	
-			request_id = resp.json.get('request_id')
-			print 'Successfully requested Uber with id: {}'.format(request_id)
-			# Schedule a job for this
+			# Add ride_id to pending_ride record
+			db.update(pr, {'external_ride_id': resp.json.get('request_id')})
+			print 'Successfully requested Uber.'
 		
 		elif self.is_declining():
 			response = 'Okay. I\'ll scratch that.'
